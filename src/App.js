@@ -4,12 +4,19 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import Admin from './components/adminpage';
 import { DoctorLogin, DoctorDashboard } from './components/doctorpage';
 import { PatientLogin, PatientDashboard } from './components/patientpage';
+import doctorContractABI from "./doctorContractABI.json";
+import patientContractABI from "./patientContractABI.json";
 
-const doctorContractABI = [];
-const patientContractABI = [];
+// const doctorContractABI = [];
+// const patientContractABI = [];
+// const doctorContractAddress = "";
+// const patientContractAddress = "";
 
-const doctorContractAddress = "";
-const patientContractAddress = "";
+// console.log("Doctor Contract ABI:", doctorContractABI);
+// console.log("Patient Contract ABI:", patientContractABI);
+
+const doctorContractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const patientContractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 
 const Home = ({ doctorContract, patientContract, account, connectWallet }) => {
