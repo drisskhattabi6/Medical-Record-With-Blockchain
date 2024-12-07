@@ -25,13 +25,13 @@ contract PatientManagement {
         owner = msg.sender;
     }
     
-function registerPatient(string memory patientId, string memory name) public onlyOwner {
-    require(!patients[patientId].exists, "Patient ID already exists");
-    patients[patientId].name = name;
-    patients[patientId].wallet = tx.origin; // Changed from msg.sender
-    patients[patientId].exists = true;
-    emit PatientRegistered(patientId, name, tx.origin);
-}
+    function registerPatient(string memory patientId, string memory name) public onlyOwner {
+        require(!patients[patientId].exists, "Patient ID already exists");
+        patients[patientId].name = name;
+        patients[patientId].wallet = tx.origin; // Changed from msg.sender
+        patients[patientId].exists = true;
+        emit PatientRegistered(patientId, name, tx.origin);
+    }
     
     function grantAccessToDoctor(string memory patientId, string memory doctorId) public {
         require(patients[patientId].exists, "Patient does not exist");
@@ -43,4 +43,15 @@ function registerPatient(string memory patientId, string memory name) public onl
         require(patients[patientId].exists, "Patient does not exist");
         return patients[patientId].doctorAccess[doctorId];
     }
+
+    function getPatient(string memory patientId) 
+        public 
+        view 
+        returns (string memory name, address wallet, bool exists) 
+    {
+        require(patients[patientId].exists, "Patient does not exist");
+        Patient storage patient = patients[patientId];
+        return (patient.name, patient.wallet, patient.exists);
+    }
+
 }

@@ -7,16 +7,8 @@ import { PatientLogin, PatientDashboard } from './components/patientpage';
 import doctorContractABI from "./doctorContractABI.json";
 import patientContractABI from "./patientContractABI.json";
 
-// const doctorContractABI = [];
-// const patientContractABI = [];
-// const doctorContractAddress = "";
-// const patientContractAddress = "";
-
-// console.log("Doctor Contract ABI:", doctorContractABI);
-// console.log("Patient Contract ABI:", patientContractABI);
-
-const doctorContractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-const patientContractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const doctorContractAddress = "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44";
+const patientContractAddress = "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1";
 
 
 const Home = ({ doctorContract, patientContract, account, connectWallet }) => {
@@ -57,8 +49,9 @@ const Home = ({ doctorContract, patientContract, account, connectWallet }) => {
 	  </div>
 	);
   };
-  
-  const App = () => {
+
+
+const App = () => {
 	const [doctorContract, setDoctorContract] = useState(null);
 	const [patientContract, setPatientContract] = useState(null);
 	const [account, setAccount] = useState('');
@@ -134,33 +127,39 @@ const Home = ({ doctorContract, patientContract, account, connectWallet }) => {
 			  connectWallet={connectWallet}
 			/>
 		  } />
+
 		  <Route path="/admin" element={
 			<Admin getSignedContracts={getSignedContracts} />
 		  } />
+
 		  <Route path="/doctor-login" element={
 			<DoctorLogin contract={doctorContract} />
 		  } />
-		  <Route path="/doctor-dashboard/:id" element={
-  <DoctorDashboard 
-    doctorContract={doctorContract}
-    patientContract={patientContract}
-    getSignedContracts={getSignedContracts}
-  />
-} />
-		  <Route path="/patient-login" element={
-			<PatientLogin contract={patientContract} />
-		  } />
-		  <Route path="/patient-dashboard/:id" element={
-  <PatientDashboard 
-    doctorContract={doctorContract}
-    patientContract={patientContract}
-    getSignedContracts={getSignedContracts}
-  />
-} />
+
+		    <Route path="/doctor-dashboard/:id" element={
+				<DoctorDashboard 
+					doctorContract={doctorContract}
+					patientContract={patientContract}
+					getSignedContracts={getSignedContracts}
+				/>
+			} />
+
+			<Route path="/patient-login" element={
+				<PatientLogin contract={patientContract} />
+			} />
+
+			<Route path="/patient-dashboard/:id" element={
+				<PatientDashboard 
+					doctorContract={doctorContract}
+					patientContract={patientContract}
+					getSignedContracts={getSignedContracts}
+				/>
+			} />
+
 		  <Route path="*" element={<Navigate to="/" />} />
 		</Routes>
 	  </BrowserRouter>
 	);
   };
   
-  export default App;  
+export default App;  

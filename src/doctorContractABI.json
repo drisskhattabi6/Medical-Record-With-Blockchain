@@ -1,6 +1,76 @@
-
-
 [
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "hash",
+				"type": "string"
+			}
+		],
+		"name": "addFolderHash",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "doctorId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "patientId",
+				"type": "string"
+			}
+		],
+		"name": "addPatientAccess",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "doctorId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "patientId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "folderId",
+				"type": "string"
+			}
+		],
+		"name": "addRecord",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "doctorId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			}
+		],
+		"name": "registerDoctor",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
 	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
@@ -37,6 +107,25 @@
 			{
 				"indexed": false,
 				"internalType": "string",
+				"name": "doctorId",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "patientId",
+				"type": "string"
+			}
+		],
+		"name": "PatientAccessAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
 				"name": "patientId",
 				"type": "string"
 			},
@@ -49,53 +138,18 @@
 			{
 				"indexed": false,
 				"internalType": "string",
-				"name": "message",
+				"name": "folderId",
 				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
 			}
 		],
 		"name": "RecordAdded",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "doctorId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "patientId",
-				"type": "string"
-			}
-		],
-		"name": "addPatientAccess",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "doctorId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "patientId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "message",
-				"type": "string"
-			}
-		],
-		"name": "addRecord",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"inputs": [
@@ -191,7 +245,7 @@
 				"components": [
 					{
 						"internalType": "string",
-						"name": "message",
+						"name": "id",
 						"type": "string"
 					},
 					{
@@ -206,13 +260,32 @@
 					},
 					{
 						"internalType": "string",
-						"name": "doctorName",
+						"name": "patientId",
 						"type": "string"
 					}
 				],
 				"internalType": "struct DoctorManagement.Record[]",
 				"name": "",
 				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getUserFolders",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "",
+				"type": "string[]"
 			}
 		],
 		"stateMutability": "view",
@@ -253,7 +326,7 @@
 		"outputs": [
 			{
 				"internalType": "string",
-				"name": "message",
+				"name": "id",
 				"type": "string"
 			},
 			{
@@ -268,29 +341,11 @@
 			},
 			{
 				"internalType": "string",
-				"name": "doctorName",
+				"name": "patientId",
 				"type": "string"
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "doctorId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			}
-		],
-		"name": "registerDoctor",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]
