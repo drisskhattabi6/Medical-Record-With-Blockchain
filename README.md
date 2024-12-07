@@ -10,6 +10,24 @@ const doctorContractAddress = "ContractAddress";
 const patientContractAddress = "ContractAddress";
 ```
 
+-------------
+
+## Run IPFS in Docker
+```
+docker run -d --name ipfs_host -p 4001:4001 -p 5001:5001 -p 8080:8080 ipfs/kubo
+```
+
+- 4001: Peer-to-peer communication.
+- 5001: API access.
+- 8080: Gateway for accessing files.
+
+### Then Install IPFS HTTP Client
+
+Install the ipfs-http-client library in your React app:
+
+```
+npm install ipfs-http-client
+```
 ----
 
 ### functionalities : 
