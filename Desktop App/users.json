@@ -13,21 +13,9 @@
             "role": "patient"
         },
         {
-            "username": "chihab",
-            "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-            "private_key": "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
-            "role": "patient"
-        },
-        {
             "username": "ayman",
             "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
             "private_key": "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
-            "role": "doctor"
-        },
-        {
-            "username": "reda",
-            "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-            "private_key": "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba",
             "role": "doctor"
         }
     ]

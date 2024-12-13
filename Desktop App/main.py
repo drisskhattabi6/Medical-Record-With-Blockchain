@@ -1,54 +1,109 @@
-import json
-import hashlib
-import requests
 import os
+import sys
+import json
+import stat
+import hashlib
 import datetime
+import requests
 import mimetypes
-import customtkinter as ctk
+import subprocess
 from web3 import Web3
-from eth_account import Account
-import ipfshttpclient
 from PIL import Image
+import customtkinter as ctk
+from eth_account import Account
 import tkinter.filedialog as filedialog
+import ipfshttpclient
 import shutil
+
 
 # Add this class right after your imports and before HealthcareDApp class
 class IPFSStorage:
+
     def __init__(self):
         try:
-            # url = "http://127.0.0.1:5001/api/v0/version"
-            # print(url)
-            # response = requests.post(url)
-            # if response.status_code == 200:
-            #     print("IPFS Version:", response.json())
-            # else:
-            #     print(f"Failed to connect: {response.status_code}, {response.text}")
-
-            # Connect to local IPFS daemon
-            print('-----------------')
-            self.client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001')
-            print(self.client.version())
-            print('-----------------')
-            # self.client = ipfshttpclient.connect('http://127.0.0.1:5001/api/v0/')
+            # Connect to the IPFS daemon using HTTP API
+            url = "http://127.0.0.1:5001/api/v0/version"
+            response = requests.post(url)
+            if response.status_code == 200:
+                version_info = response.json()
+                print("Connected to IPFS:", version_info)
+            else:
+                raise Exception(f"Failed to connect: {response.status_code}, {response.text}")
         except Exception as e:
             print(f"Error connecting to IPFS: {e}")
 
     def add_file(self, file_path):
         """Add a file to IPFS and return its hash"""
         try:
-            result = self.client.add(file_path)
-            return result['Hash']
+            url = "http://127.0.0.1:5001/api/v0/add"
+            with open(file_path, 'rb') as file:
+                files = {'file': file}
+                response = requests.post(url, files=files)
+
+            if response.status_code == 200:
+                result = response.json()
+                return result['Hash']
+            else:
+                raise Exception(f"Failed to add file: {response.status_code}, {response.text}")
         except Exception as e:
             raise Exception(f"Error adding file to IPFS: {e}")
 
     def get_file(self, ipfs_hash, output_path):
         """Retrieve a file from IPFS and save it to the specified path"""
         try:
-            self.client.get(ipfs_hash, output_path)
+            # Use the gateway endpoint
+            url = f"http://127.0.0.1:8080/ipfs/{ipfs_hash}"
+            
+            # Use requests.get() with a timeout
+            response = requests.get(url, stream=True, timeout=30)
+            print(f"Retrieving file: {ipfs_hash} to {output_path}")
+            print(f"Response status: {response.status_code}")
+
+            if response.status_code == 200:
+                # Ensure the directory exists with full permissions
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                
+                # Attempt to set full permissions on the directory
+                try:
+                    # Try to change directory permissions
+                    os.chmod(os.path.dirname(output_path), 0o777)
+                except Exception as perm_error:
+                    print(f"Could not change directory permissions: {perm_error}")
+                
+                # Write the content
+                try:
+                    with open(output_path, 'wb') as file:
+                        file.write(response.content)
+                    
+                    # Set file permissions
+                    try:
+                        os.chmod(output_path, 0o666)  # Read and write for everyone
+                    except Exception as file_perm_error:
+                        print(f"Could not change file permissions: {file_perm_error}")
+                    
+                    # Verify file was written
+                    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                        print(f"File successfully saved to {output_path}")
+                        return True
+                    else:
+                        raise Exception("File was not saved correctly")
+                
+                except PermissionError as pe:
+                    print(f"Permission error: {pe}")
+                    print(f"Output path: {output_path}")
+                    print(f"Directory exists: {os.path.exists(os.path.dirname(output_path))}")
+                    print(f"Directory permissions: {oct(os.stat(os.path.dirname(output_path)).st_mode)}")
+                    raise
+            else:
+                raise Exception(f"Failed to retrieve file: {response.status_code}, {response.text}")
+        
         except Exception as e:
-            raise Exception(f"Error retrieving file from IPFS: {e}")
+            print(f"Detailed error retrieving file: {e}")
+            raise
+
 
 class HealthcareDApp:
+
     def __init__(self):
         self.w3 = Web3(Web3.HTTPProvider('http://localhost:8545'))
 
@@ -106,51 +161,85 @@ class HealthcareDApp:
         with open('users.json', 'r') as f:
             return json.load(f)
 
+    def _open_file_with_default_app(self, file_path):
+        """Helper method to open file with default system application"""
+        try:
+            if os.name == 'nt':  # Windows
+                os.startfile(file_path)
+            elif os.name == 'posix':  # Linux/Mac
+                import subprocess
+                subprocess.run(['xdg-open' if sys.platform.startswith('linux') else 'open', file_path], check=True)
+        except Exception as e:
+            print(f"Error opening file with default application: {e}")
+            # Optionally, show a message to the user
+            error_window = ctk.CTkToplevel(self.root)
+            error_window.title("Error")
+            error_window.geometry("400x100")
+            ctk.CTkLabel(error_window, text=f"Could not open file: {str(e)}").pack(pady=10)
+            ctk.CTkButton(error_window, text="OK", command=error_window.destroy).pack(pady=5)
+
+    def cleanup_temp_file(self, file_path):
+        """Safely remove temporary file"""
+        try:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"Temporary file deleted: {file_path}")
+                except PermissionError:
+                    print(f"Permission denied when trying to delete {file_path}")
+                except Exception as e:
+                    print(f"Error cleaning up temp file {file_path}: {str(e)}")
+        except Exception as e:
+            print(f"Unexpected error in cleanup_temp_file: {str(e)}")
+
     def view_medical_file(self, ipfs_hash, file_type, filename):
         try:
-            # Create temp directory in user's home directory instead of project directory
+            # Use a more explicit path creation method
             temp_dir = os.path.join(os.path.expanduser('~'), 'medical_temp_files')
-            if not os.path.exists(temp_dir):
-                os.makedirs(temp_dir, mode=0o755)  # Set proper permissions
-
-            # Create temporary file with unique name
-            temp_file = os.path.join(temp_dir, f"temp_{filename}")
-
-            # Get file from IPFS and save with proper permissions
-            self.ipfs_storage.get_file(ipfs_hash, temp_dir)
-            actual_file = os.path.join(temp_dir, ipfs_hash)
-
-            if os.path.exists(actual_file):
-                # Rename the file to something readable
-                os.rename(actual_file, temp_file)
-
-                # Set proper file permissions
-                os.chmod(temp_file, 0o644)
-
+            
+            # Create directory with full permissions
+            try:
+                os.makedirs(temp_dir, exist_ok=True)
+                os.chmod(temp_dir, 0o777)  # Full permissions
+            except Exception as dir_error:
+                print(f"Error creating directory: {dir_error}")
+            
+            # Generate full path for the file
+            temp_file = os.path.join(temp_dir, filename)
+            print(f"Attempting to save file to: {temp_file}")
+            
+            # Retrieve file 
+            if self.ipfs_storage.get_file(ipfs_hash, temp_file):
+                # Attempt to set full file permissions
+                try:
+                    os.chmod(temp_file, 0o666)  # Read and write for everyone
+                except Exception as perm_error:
+                    print(f"Could not set file permissions: {perm_error}")
+                
                 # Open file based on type
-                if file_type.startswith('image/'):
-                    try:
-                        img = Image.open(temp_file)
-                        img.show()
-                    except Exception:
-                        if os.name == 'nt':  # Windows
-                            os.startfile(temp_file)
-                        else:  # Linux/Mac
-                            os.system(f'xdg-open "{temp_file}"')
-                else:
-                    # For other file types
-                    if os.name == 'nt':  # Windows
-                        os.startfile(temp_file)
-                    else:  # Linux/Mac
-                        os.system(f'xdg-open "{temp_file}"')
-
-                # Clean up temp file after a delay
-                self.root.after(5000, lambda: os.remove(temp_file) if os.path.exists(temp_file) else None)
-
+                try:
+                    if file_type.startswith('image/'):
+                        try:
+                            img = Image.open(temp_file)
+                            img.show()
+                        except Exception as img_error:
+                            print(f"Error opening image: {img_error}")
+                            self._open_file_with_default_app(temp_file)
+                    else:
+                        # For other file types
+                        self._open_file_with_default_app(temp_file)
+                    
+                    # Schedule cleanup after delay
+                    self.root.after(5000, lambda: self.cleanup_temp_file(temp_file))
+                
+                except Exception as open_error:
+                    print(f"Error opening file: {open_error}")
+                    raise
             else:
-                raise Exception("Failed to retrieve file from IPFS")
-
+                raise Exception("Failed to retrieve file from IPFS") 
+            
         except Exception as e:
+            print(f"Detailed error in view_medical_file: {e}")
             error_window = ctk.CTkToplevel(self.root)
             error_window.title("Error")
             error_window.geometry("400x100")
@@ -207,19 +296,19 @@ class HealthcareDApp:
     def setup_gui(self):
         self.root = ctk.CTk()
         self.root.title("Healthcare DApp")
-        self.root.geometry("400x400")
+        self.root.geometry("600x600")
 
         self.show_login_page()
 
     def show_login_page(self):
         self.clear_window()
 
-        ctk.CTkLabel(self.root, text="Login").pack(pady=10)
+        ctk.CTkLabel(self.root, text="Login Page", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        self.username_entry = ctk.CTkEntry(self.root, placeholder_text="Username")
+        self.username_entry = ctk.CTkEntry(self.root, placeholder_text="Username", width=250)
         self.username_entry.pack(pady=10)
 
-        self.password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*")
+        self.password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*", width=250)
         self.password_entry.pack(pady=10)
 
         ctk.CTkButton(self.root, text="Login", command=self.login).pack(pady=10)
@@ -228,15 +317,13 @@ class HealthcareDApp:
         self.clear_window()
 
         # Main title
-        ctk.CTkLabel(self.root, text="Admin Dashboard",
-                     font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text="Admin Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
 
         # Admin Actions at the top
         actions_frame = ctk.CTkFrame(self.root)
         actions_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(actions_frame, text="Admin Actions",
-                     font=("Helvetica", 16, "bold")).pack(pady=5)
+        ctk.CTkLabel(actions_frame, text="Admin Actions", font=("Helvetica", 16, "bold")).pack(pady=5)
 
         button_frame = ctk.CTkFrame(actions_frame)
         button_frame.pack(pady=5, padx=5, fill="y")
@@ -263,8 +350,7 @@ class HealthcareDApp:
             stats_frame = ctk.CTkFrame(main_frame)
             stats_frame.pack(pady=10, padx=5, fill="x")
 
-            ctk.CTkLabel(stats_frame, text="System Statistics",
-                         font=("Helvetica", 16, "bold")).pack(pady=5)
+            ctk.CTkLabel(stats_frame, text="System Statistics", font=("Helvetica", 16, "bold")).pack(pady=5)
 
             # Get statistics data
             data = self.load_encrypted_data()
@@ -395,12 +481,12 @@ class HealthcareDApp:
     def show_registration_page(self, role):
         self.clear_window()
 
-        ctk.CTkLabel(self.root, text=f"Register {role.capitalize()}").pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Register {role.capitalize()}", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        username_entry = ctk.CTkEntry(self.root, placeholder_text="Username")
+        username_entry = ctk.CTkEntry(self.root, placeholder_text="Username", width=250)
         username_entry.pack(pady=10)
 
-        password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*")
+        password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*", width=250)
         password_entry.pack(pady=10)
 
         private_key_entry = ctk.CTkEntry(self.root, placeholder_text="Private Key (0x...)", width=300)
@@ -414,10 +500,10 @@ class HealthcareDApp:
                 password_entry.get(),
                 private_key_entry.get(),
                 role
-            )
+            ), width=200
         ).pack(pady=10)
 
-        ctk.CTkButton(self.root, text="Back", command=self.show_admin_page).pack(pady=10)
+        ctk.CTkButton(self.root, text="Back", command=self.show_admin_page, width=250).pack(pady=10)
 
     def clear_window(self):
         for widget in self.root.winfo_children():
@@ -464,7 +550,7 @@ class HealthcareDApp:
                 transaction = contract.functions.registerDoctor(
                     account.address,
                     username,
-                    "Doctor"  # Default role for doctors
+                    "Doctor"
                 ).build_transaction({
                     'from': admin_address,
                     'nonce': self.w3.eth.get_transaction_count(admin_address),
@@ -476,7 +562,7 @@ class HealthcareDApp:
                 transaction = contract.functions.registerPatient(
                     account.address,
                     username,
-                    "Patient"  # Default role for patients
+                    "Patient"
                 ).build_transaction({
                     'from': admin_address,
                     'nonce': self.w3.eth.get_transaction_count(admin_address),
@@ -521,7 +607,8 @@ class HealthcareDApp:
 
     def show_doctor_page(self, username):
         self.clear_window()
-        ctk.CTkLabel(self.root, text=f"Welcome Dr. {username}").pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Doctor Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Welcome Dr. {username}", font=("Helvetica", 16, "bold")).pack(pady=10)
 
         # Get doctor's address
         data = self.load_encrypted_data()
@@ -557,7 +644,7 @@ class HealthcareDApp:
 
         # Main title
         ctk.CTkLabel(self.root, text=f"Medical Records for {patient_name}",
-                     font=("Helvetica", 16, "bold")).pack(pady=10)
+                     font=("Helvetica", 18, "bold")).pack(pady=10)
 
         # Get doctor's data for authentication
         data = self.load_encrypted_data()
@@ -871,11 +958,13 @@ class HealthcareDApp:
 
     def show_patient_page(self, username):
         self.clear_window()
-        self.current_username = username  # Store current username
+        self.current_username = username  
 
         # Main title
-        ctk.CTkLabel(self.root, text=f"Welcome {username}",
+        ctk.CTkLabel(self.root, text=f"Patient Dashboard",
                      font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Welcome {username}",
+                     font=("Helvetica", 18, "bold")).pack(pady=10)
 
         # Get patient's data and address
         data = self.load_encrypted_data()
@@ -892,8 +981,8 @@ class HealthcareDApp:
 
         doctors_header = ctk.CTkFrame(doctors_section)
         doctors_header.pack(pady=5, padx=5, fill="x")
-        ctk.CTkLabel(doctors_header, text="My Doctors",
-                     font=("Helvetica", 16, "bold")).pack(side="left", pady=5)
+        ctk.CTkLabel(doctors_header, text="Available Doctors",
+                     font=("Helvetica", 18, "bold")).pack(side="left", pady=5)
 
         # Get all users and filter doctors
         all_users = data['users']
@@ -926,6 +1015,7 @@ class HealthcareDApp:
                     ).call()
 
                     if is_authorized:
+
                         def revoke_access(doc_addr=doctor_address):
                             success, message = self.revoke_doctor_access(
                                 doc_addr,
@@ -958,12 +1048,15 @@ class HealthcareDApp:
                         ).pack(side="right", padx=5)
 
                     else:
+
                         def grant_access(doc_addr=doctor_address):
                             success, message = self.grant_doctor_access(
                                 doc_addr,
                                 patient_address,
                                 patient_data['private_key']
                             )
+
+                            print('success, message : ', success, message)
 
                             status_label = ctk.CTkLabel(doctor_frame, text=message)
                             status_label.pack(side="right", padx=5)
@@ -973,32 +1066,19 @@ class HealthcareDApp:
                             else:
                                 self.root.after(2000, status_label.destroy)
 
-                        grant_btn = ctk.CTkButton(
-                            button_frame,
-                            text="Grant Access",
-                            fg_color="green",
-                            hover_color="darkgreen",
-                            command=grant_access
-                        )
+                        grant_btn = ctk.CTkButton(button_frame, text="Grant Access", fg_color="green",
+                            hover_color="darkgreen", command=grant_access)
                         grant_btn.pack(side="right", padx=5)
 
                         # Add status indicator
-                        ctk.CTkLabel(
-                            info_frame,
-                            text="No Access",
-                            text_color="gray"
-                        ).pack(side="right", padx=5)
+                        ctk.CTkLabel(info_frame, text="No Access", text_color="gray").pack(side="right", padx=5)
 
                 except Exception as e:
                     print(f"Error checking doctor authorization: {e}")
-                    error_btn = ctk.CTkButton(
-                        button_frame,
-                        text="Error",
-                        state="disabled",
-                        fg_color="gray"
-                    )
+                    error_btn = ctk.CTkButton(button_frame, text="Error", state="disabled", fg_color="gray")
                     error_btn.pack(side="right", padx=5)
 
+        # -------------------------------------------------
         # Medical Records Section
         records_section = ctk.CTkFrame(main_frame)
         records_section.pack(pady=10, padx=10, fill="x")
@@ -1006,7 +1086,7 @@ class HealthcareDApp:
         records_header = ctk.CTkFrame(records_section)
         records_header.pack(pady=5, padx=5, fill="x")
         ctk.CTkLabel(records_header, text="My Medical Records",
-                     font=("Helvetica", 16, "bold")).pack(side="left", pady=5)
+                     font=("Helvetica", 18, "bold")).pack(side="left", pady=5)
 
         try:
             # Get only active medical records
@@ -1014,6 +1094,7 @@ class HealthcareDApp:
 
             if not records:
                 ctk.CTkLabel(records_section, text="No medical records available").pack(pady=5)
+
             else:
                 # Display only active records
                 for record in records:
@@ -1024,6 +1105,7 @@ class HealthcareDApp:
                         try:
                             doctor_info = self.doctor_contract.functions.getDoctor(record[6]).call()
                             doctor_name = doctor_info[0]
+
                         except Exception as e:
                             print(f"Error getting doctor info: {e}")
                             doctor_name = "Unknown Doctor"
@@ -1040,47 +1122,30 @@ class HealthcareDApp:
                         header_frame = ctk.CTkFrame(record_frame)
                         header_frame.pack(pady=2, padx=5, fill="x")
 
-                        title_label = ctk.CTkLabel(
-                            header_frame,
-                            text=title,
-                            font=("Helvetica", 14, "bold")
-                        )
+                        title_label = ctk.CTkLabel(header_frame, text=f'Record Title : {title}', font=("Helvetica", 14, "bold"))
                         title_label.pack(side="left", pady=2, padx=5)
 
-                        doctor_label = ctk.CTkLabel(
-                            header_frame,
-                            text=f"Dr. {doctor_name}",
-                            font=("Helvetica", 12)
-                        )
+                        doctor_label = ctk.CTkLabel( header_frame, text=f"From Dr. {doctor_name}", font=("Helvetica", 14))
                         doctor_label.pack(side="right", pady=2, padx=5)
 
                         # File info and date
                         info_frame = ctk.CTkFrame(record_frame)
                         info_frame.pack(pady=2, padx=5, fill="x")
 
-                        date_label = ctk.CTkLabel(
-                            info_frame,
-                            text=f"Date: {timestamp}"
-                        )
+                        date_label = ctk.CTkLabel(info_frame, text=f"Date: {timestamp}")
                         date_label.pack(side="left", pady=2, padx=5)
 
-                        file_label = ctk.CTkLabel(
-                            info_frame,
-                            text=f"File: {file_name}"
-                        )
+                        file_label = ctk.CTkLabel(info_frame, text=f"File: {file_name}")
                         file_label.pack(side="right", pady=2, padx=5)
 
                         # Description section
                         desc_frame = ctk.CTkFrame(record_frame)
                         desc_frame.pack(pady=2, padx=5, fill="x")
 
-                        ctk.CTkLabel(
-                            desc_frame,
-                            text="Description:",
-                            font=("Helvetica", 12, "bold")
-                        ).pack(anchor="w", pady=(2, 0), padx=5)
+                        ctk.CTkLabel( desc_frame, text="Description : ", 
+                                     font=("Helvetica", 14, "bold")).pack(anchor="w", pady=(2, 0), padx=5)
 
-                        desc_text = ctk.CTkTextbox(desc_frame, height=60)
+                        desc_text = ctk.CTkTextbox(desc_frame, height=40)
                         desc_text.pack(pady=(0, 2), padx=5, fill="x")
                         desc_text.insert("1.0", resume)
                         desc_text.configure(state="disabled")
@@ -1090,13 +1155,10 @@ class HealthcareDApp:
                         button_frame.pack(pady=2, padx=5, fill="x")
 
                         def view_file(record_hash=ipfs_hash, record_type=file_type, record_name=file_name):
+                            print('record_hash=', ipfs_hash, 'record_type=', file_type, 'record_name=', file_name)
                             self.view_medical_file(record_hash, record_type, record_name)
 
-                        view_btn = ctk.CTkButton(
-                            button_frame,
-                            text="View Record",
-                            command=view_file
-                        )
+                        view_btn = ctk.CTkButton(button_frame, text="View Record", command=view_file)
                         view_btn.pack(side="right", pady=2, padx=5)
 
         except Exception as e:
@@ -1109,11 +1171,8 @@ class HealthcareDApp:
         nav_frame.pack(pady=10, padx=10, fill="x")
 
         # Logout button
-        ctk.CTkButton(
-            nav_frame,
-            text="Logout",
-            command=self.show_login_page
-        ).pack(pady=5)
+        ctk.CTkButton(nav_frame, text="Logout", command=self.show_login_page).pack(pady=5)
+
     def grant_doctor_access(self, doctor_address, patient_address, patient_private_key):
             try:
                 # Build and send transaction

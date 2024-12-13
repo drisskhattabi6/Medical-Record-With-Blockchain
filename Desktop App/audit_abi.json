@@ -1,33 +1,5 @@
 [
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_actor",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "_actionType",
-				"type": "string"
-			},
-			{
-				"internalType": "address",
-				"name": "_subject",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "_details",
-				"type": "string"
-			}
-		],
-		"name": "addAuditLog",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
@@ -84,6 +56,73 @@
 	},
 	{
 		"inputs": [],
+		"name": "DOCTOR_REGISTERED",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "PATIENT_REGISTERED",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "RECORD_ADDED",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_actor",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_actionType",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "_subject",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_details",
+				"type": "string"
+			}
+		],
+		"name": "addAuditLog",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "admin",
 		"outputs": [
 			{
@@ -129,19 +168,6 @@
 				"internalType": "uint256",
 				"name": "timestamp",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "DOCTOR_REGISTERED",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
 			}
 		],
 		"stateMutability": "view",
@@ -274,32 +300,6 @@
 				"internalType": "struct HealthcareAudit.AuditRecord[]",
 				"name": "",
 				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "PATIENT_REGISTERED",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "RECORD_ADDED",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
 			}
 		],
 		"stateMutability": "view",
