@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import stat
 import hashlib
 import datetime
 import requests
@@ -12,11 +11,8 @@ from PIL import Image
 import customtkinter as ctk
 from eth_account import Account
 import tkinter.filedialog as filedialog
-import ipfshttpclient
-import shutil
 
 
-# Add this class right after your imports and before HealthcareDApp class
 class IPFSStorage:
 
     def __init__(self):
@@ -117,11 +113,11 @@ class HealthcareDApp:
 
         # Load contract ABIs from files
         try:
-            with open('doctor_abi.json', 'r') as abi_file:
+            with open('ABI/doctor_abi.json', 'r') as abi_file:
                 doctor_abi = json.load(abi_file)
-            with open('patient_abi.json', 'r') as abi_file:
+            with open('ABI/patient_abi.json', 'r') as abi_file:
                 patient_abi = json.load(abi_file)
-            with open('audit_abi.json', 'r') as abi_file:
+            with open('ABI/audit_abi.json', 'r') as abi_file:
                 audit_abi = json.load(abi_file)
         except FileNotFoundError:
             raise Exception("ABI files not found! Please ensure they exist in the same directory.")
@@ -1174,9 +1170,9 @@ class HealthcareDApp:
         ctk.CTkButton(nav_frame, text="Logout", command=self.show_login_page).pack(pady=5)
 
     def grant_doctor_access(self, doctor_address, patient_address, patient_private_key):
-            try:
-                # Build and send transaction
-                transaction = self.doctor_contract.functions.addPatientAccess(
+        try:
+            # Build and send transaction
+            transaction = self.doctor_contract.functions.addPatientAccess(
                     doctor_address,
                     patient_address
                 ).build_transaction({
@@ -1184,104 +1180,99 @@ class HealthcareDApp:
                     'nonce': self.w3.eth.get_transaction_count(patient_address),
                     'gas': 2000000,
                     'gasPrice': self.w3.eth.gas_price
-                })
+            })
 
-                signed_txn = self.w3.eth.account.sign_transaction(transaction, patient_private_key)
-                tx_hash = self.w3.eth.send_raw_transaction(signed_txn.raw_transaction)
-                receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+            signed_txn = self.w3.eth.account.sign_transaction(transaction, patient_private_key)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
 
-                if receipt.status == 1:  # Transaction successful
-                    success_label = ctk.CTkLabel(self.root, text="Access granted successfully!")
-                    success_label.pack(pady=10)
-                    # Refresh the patient page after 2 seconds
-                    self.root.after(2000, lambda: self.show_patient_page(self.current_username))
-                    # After successful access grant
-                    self.add_audit_log(
-                        patient_address,
-                        "ACCESS_GRANTED",
-                        doctor_address,
-                        "Patient granted access to doctor",
-                        patient_private_key
-                    )
-                else:
-                    error_label = ctk.CTkLabel(self.root, text="Transaction failed!")
-                    error_label.pack(pady=10)
+            if receipt.status == 1:  # Transaction successful
+                success_label = ctk.CTkLabel(self.root, text="Access granted successfully!")
+                success_label.pack(pady=10)
+                # Refresh the patient page after 2 seconds
+                self.root.after(2000, lambda: self.show_patient_page(self.current_username))
+                # After successful access grant
+                self.add_audit_log(
+                    patient_address,
+                    "ACCESS_GRANTED",
+                    doctor_address,
+                    "Patient granted access to doctor",
+                    patient_private_key
+                )
+            else:
+                error_label = ctk.CTkLabel(self.root, text="Transaction failed!")
+                error_label.pack(pady=10)
 
-            except Exception as e:
+        except Exception as e:
                 error_label = ctk.CTkLabel(self.root, text=f"Error granting access: {str(e)}")
                 error_label.pack(pady=10)
 
     def show_medical_record_details(self, record, doctor_name, timestamp):
-            # Create a new window for record details
-            detail_window = ctk.CTkToplevel(self.root)
-            detail_window.title("Medical Record Details")
-            detail_window.geometry("400x300")
+        # Create a new window for record details
+        detail_window = ctk.CTkToplevel(self.root)
+        detail_window.title("Medical Record Details")
+        detail_window.geometry("400x400")
 
-            # Add record details
-            ctk.CTkLabel(detail_window, text=f"Doctor: {doctor_name}").pack(pady=5)
-            ctk.CTkLabel(detail_window, text=f"Date: {timestamp}").pack(pady=5)
+        # Add record details
+        ctk.CTkLabel(detail_window, text=f"Doctor: {doctor_name}").pack(pady=5)
+        ctk.CTkLabel(detail_window, text=f"Date: {timestamp}").pack(pady=5)
 
-            # Create scrollable text area for record content
-            record_text = ctk.CTkTextbox(detail_window, width=350, height=200)
-            record_text.pack(pady=10, padx=10)
-            record_text.insert("1.0", record)
-            record_text.configure(state="disabled")  # Make it read-only
+        # Create scrollable text area for record content
+        record_text = ctk.CTkTextbox(detail_window, width=350, height=200)
+        record_text.pack(pady=10, padx=10)
+        record_text.insert("1.0", record)
+        record_text.configure(state="disabled")
 
-            # Close button
-            ctk.CTkButton(detail_window, text="Close",
-                          command=detail_window.destroy).pack(pady=10)
-
+        # Close button
+        ctk.CTkButton(detail_window, text="Close", command=detail_window.destroy).pack(pady=10)
+    # ????????????
     def refresh_medical_records(self, patient_address, records_frame):
-            # Clear existing records
-            for widget in records_frame.winfo_children():
-                widget.destroy()
+        # Clear existing records
+        for widget in records_frame.winfo_children():
+            widget.destroy()
 
-            try:
-                records = self.patient_contract.functions.getMedicalRecords(patient_address).call()
+        try:
+            records = self.patient_contract.functions.getMedicalRecords(patient_address).call()
 
-                if not records:
-                    ctk.CTkLabel(records_frame, text="No medical records").pack(pady=5)
-                else:
-                    for record in records:
-                        record_frame = ctk.CTkFrame(records_frame)
-                        record_frame.pack(pady=5, padx=5, fill="x")
+            if not records:
+                ctk.CTkLabel(records_frame, text="No medical records").pack(pady=5)
 
-                        try:
+            else:
+
+                for record in records:
+                    record_frame = ctk.CTkFrame(records_frame)
+                    record_frame.pack(pady=5, padx=5, fill="x")
+
+                    try:
                             doctor_info = self.doctor_contract.functions.getDoctor(record[2]).call()
                             doctor_name = doctor_info[0]
-                        except:
-                            doctor_name = "Unknown Doctor"
+                    except:
+                        doctor_name = "Unknown Doctor"
 
-                        timestamp = datetime.datetime.fromtimestamp(record[1]).strftime('%Y-%m-%d %H:%M:%S')
+                    timestamp = datetime.datetime.fromtimestamp(record[1]).strftime('%Y-%m-%d %H:%M:%S')
 
-                        # Create a preview of the record (first 50 characters)
-                        record_preview = record[0][:50] + "..." if len(record[0]) > 50 else record[0]
+                    # Create a preview of the record (first 50 characters)
+                    record_preview = record[0][:50] + "..." if len(record[0]) > 50 else record[0]
 
-                        # Add record information
-                        info_frame = ctk.CTkFrame(record_frame)
-                        info_frame.pack(fill="x", padx=5, pady=2)
+                    # Add record information
+                    info_frame = ctk.CTkFrame(record_frame)
+                    info_frame.pack(fill="x", padx=5, pady=2)
 
-                        ctk.CTkLabel(info_frame,
-                                     text=f"Dr. {doctor_name}").pack(side="left", pady=2)
-                        ctk.CTkLabel(info_frame,
-                                     text=timestamp).pack(side="right", pady=2)
+                    ctk.CTkLabel(info_frame, text=f"Dr. {doctor_name}").pack(side="left", pady=2)
+                    ctk.CTkLabel(info_frame, text=timestamp).pack(side="right", pady=2)
 
-                        # Add record preview and view button
-                        preview_frame = ctk.CTkFrame(record_frame)
-                        preview_frame.pack(fill="x", padx=5, pady=2)
+                    # Add record preview and view button
+                    preview_frame = ctk.CTkFrame(record_frame)
+                    preview_frame.pack(fill="x", padx=5, pady=2)
 
-                        ctk.CTkLabel(preview_frame,
-                                     text=record_preview).pack(side="left", pady=2)
+                    ctk.CTkLabel(preview_frame, text=record_preview).pack(side="left", pady=2)
 
-                        ctk.CTkButton(preview_frame,
-                                      text="View Details",
-                                      command=lambda r=record[0], d=doctor_name, t=timestamp:
-                                      self.show_medical_record_details(r, d, t)
-                                      ).pack(side="right", pady=2)
+                    ctk.CTkButton(preview_frame, text="View Details",command=lambda r=record[0], 
+                    d=doctor_name, t=timestamp: self.show_medical_record_details(r, d, t)).pack(side="right", pady=2)
 
-            except Exception as e:
-                ctk.CTkLabel(records_frame, text=f"Error loading records: {str(e)}").pack(pady=5)
-
+        except Exception as e:
+            ctk.CTkLabel(records_frame, text=f"Error loading records: {str(e)}").pack(pady=5)
+    # ????????????
     def check_doctor_authorization(self, doctor_address, patient_address):
             try:
                 return self.doctor_contract.functions.isAuthorized(doctor_address, patient_address).call()
@@ -1295,10 +1286,8 @@ class HealthcareDApp:
         header_frame = ctk.CTkFrame(self.root)
         header_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(header_frame, text="System Audit Log",
-                     font=("Helvetica", 20, "bold")).pack(pady=5)
-        ctk.CTkLabel(header_frame, text="Complete history of system activities",
-                     font=("Helvetica", 12)).pack(pady=(0, 5))
+        ctk.CTkLabel(header_frame, text="System Audit Log", font=("Helvetica", 20, "bold")).pack(pady=5)
+        ctk.CTkLabel(header_frame, text="Complete history of system activities", font=("Helvetica", 14)).pack(pady=(0, 5))
 
         # Create main scrollable frame for audit logs
         audit_frame = ctk.CTkScrollableFrame(self.root, width=380, height=400)
@@ -1312,17 +1301,16 @@ class HealthcareDApp:
                 # Empty state with icon
                 empty_frame = ctk.CTkFrame(audit_frame)
                 empty_frame.pack(pady=20, padx=10, fill="x")
-                ctk.CTkLabel(empty_frame, text="📝",
-                             font=("Helvetica", 24)).pack(pady=5)
-                ctk.CTkLabel(empty_frame, text="No audit records found",
-                             font=("Helvetica", 14)).pack(pady=5)
+                ctk.CTkLabel(empty_frame, text="📝", font=("Helvetica", 24)).pack(pady=5)
+                ctk.CTkLabel(empty_frame, text="No audit records found", font=("Helvetica", 14)).pack(pady=5)
+                
             else:
                 # Add filter options
                 filter_frame = ctk.CTkFrame(audit_frame)
                 filter_frame.pack(pady=5, padx=5, fill="x")
 
                 ctk.CTkLabel(filter_frame, text="Total Actions: ",
-                             font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
+                             font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
                 ctk.CTkLabel(filter_frame, text=str(len(audit_trail))).pack(side="left")
 
                 for record in reversed(audit_trail):  # Show newest first
@@ -1345,15 +1333,11 @@ class HealthcareDApp:
                     header_box.pack(pady=(5, 0), padx=5, fill="x")
 
                     # Choose icon based on action type
-                    action_icon = "👤" if "REGISTERED" in record[1] else "📝" if "RECORD" in record[
-                        1] else "🔑" if "ACCESS" in record[1] else "ℹ️"
+                    action_icon = "👤" if "REGISTERED" in record[1] else "📝" if "RECORD" in record[1] else "🔑" if "ACCESS" in record[1] else "i"
 
-                    ctk.CTkLabel(header_box, text=action_icon,
-                                 font=("Helvetica", 14)).pack(side="left", padx=5)
-                    ctk.CTkLabel(header_box, text=timestamp,
-                                 font=("Helvetica", 12)).pack(side="left", padx=5)
-                    ctk.CTkLabel(header_box, text=record[1],
-                                 font=("Helvetica", 12, "bold")).pack(side="right", padx=5)
+                    ctk.CTkLabel(header_box, text=action_icon, font=("Helvetica", 14)).pack(side="left", padx=5)
+                    ctk.CTkLabel(header_box, text=timestamp, font=("Helvetica", 14)).pack(side="left", padx=5)
+                    ctk.CTkLabel(header_box, text=record[1], font=("Helvetica", 14, "bold")).pack(side="right", padx=5)
 
                     # Content box
                     content_box = ctk.CTkFrame(record_frame)
@@ -1362,31 +1346,23 @@ class HealthcareDApp:
                     # Actor info
                     actor_frame = ctk.CTkFrame(content_box)
                     actor_frame.pack(pady=2, padx=5, fill="x")
-                    ctk.CTkLabel(actor_frame, text="Actor:",
-                                 font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
-                    ctk.CTkLabel(actor_frame, text=f"{actor_name}",
-                                 font=("Helvetica", 12)).pack(side="left", padx=5)
-                    ctk.CTkLabel(actor_frame, text=f"({record[0]})",
-                                 font=("Helvetica", 10)).pack(side="right", padx=5)
+                    ctk.CTkLabel(actor_frame, text="Actor:", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
+                    ctk.CTkLabel(actor_frame, text=f"{actor_name}", font=("Helvetica", 12)).pack(side="left", padx=5)
+                    ctk.CTkLabel(actor_frame, text=f"({record[0]})", font=("Helvetica", 10)).pack(side="right", padx=5)
 
                     # Subject info
                     subject_frame = ctk.CTkFrame(content_box)
                     subject_frame.pack(pady=2, padx=5, fill="x")
-                    ctk.CTkLabel(subject_frame, text="Subject:",
-                                 font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
-                    ctk.CTkLabel(subject_frame, text=f"{subject_name}",
-                                 font=("Helvetica", 12)).pack(side="left", padx=5)
-                    ctk.CTkLabel(subject_frame, text=f"({record[2]})",
-                                 font=("Helvetica", 10)).pack(side="right", padx=5)
+                    ctk.CTkLabel(subject_frame, text="Subject:", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
+                    ctk.CTkLabel(subject_frame, text=f"{subject_name}", font=("Helvetica", 12)).pack(side="left", padx=5)
+                    ctk.CTkLabel(subject_frame, text=f"({record[2]})", font=("Helvetica", 10)).pack(side="right", padx=5)
 
                     # Details info
                     if record[3].strip():  # Only show if there are details
                         details_frame = ctk.CTkFrame(content_box)
                         details_frame.pack(pady=2, padx=5, fill="x")
-                        ctk.CTkLabel(details_frame, text="Details:",
-                                     font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
-                        ctk.CTkLabel(details_frame, text=record[3],
-                                     font=("Helvetica", 12)).pack(side="left", padx=5)
+                        ctk.CTkLabel(details_frame, text="Details:", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
+                        ctk.CTkLabel(details_frame, text=record[3], font=("Helvetica", 12)).pack(side="left", padx=5)
 
         except Exception as e:
             error_frame = ctk.CTkFrame(audit_frame)
@@ -1428,7 +1404,6 @@ class HealthcareDApp:
         # If neither, return address
         return address
 
-    # Add this helper method to your HealthcareDApp class
     def add_audit_log(self, actor_address, action_type, subject_address, details, private_key):
         try:
             transaction = self.audit_contract.functions.addAuditLog(
@@ -1450,28 +1425,28 @@ class HealthcareDApp:
             print(f"Error adding audit log: {str(e)}")
 
     def login(self):
-            username = self.username_entry.get()
-            password = self.password_entry.get()
+        username = self.username_entry.get()
+        password = self.password_entry.get()
 
-            data = self.load_encrypted_data()
+        data = self.load_encrypted_data()
 
-            for user in data['users']:
-                if user['username'] == username and user['password'] == self.hash_password(password):
-                    self.current_username = username  # Store current username
-                    if user['role'] == 'admin':
-                        self.show_admin_page()
-                    elif user['role'] == 'doctor':
-                        self.show_doctor_page(username)
-                    elif user['role'] == 'patient':
-                        self.show_patient_page(username)
-                    return
+        for user in data['users']:
+            if user['username'] == username and user['password'] == self.hash_password(password):
+                self.current_username = username
+                if user['role'] == 'admin':
+                    self.show_admin_page()
+                elif user['role'] == 'doctor':
+                    self.show_doctor_page(username)
+                elif user['role'] == 'patient':
+                    self.show_patient_page(username)
+                return
 
-            error_label = ctk.CTkLabel(self.root, text="Invalid credentials")
-            error_label.pack(pady=10)
-            self.root.after(2000, error_label.destroy)  # Remove error message after 2 seconds
+        error_label = ctk.CTkLabel(self.root, text="Invalid credentials")
+        error_label.pack(pady=10)
+        self.root.after(3000, error_label.destroy)  # Remove error message after 2 seconds
 
     def run(self):
-            self.current_username = None  # Initialize current username
+            self.current_username = None
             self.root.mainloop()
 
     def revoke_doctor_access(self, doctor_address, patient_address, patient_private_key):
@@ -1507,13 +1482,9 @@ class HealthcareDApp:
         except Exception as e:
             return False, f"Error revoking access: {str(e)}"
 
-    # Update the doctor buttons section in show_patient_page
     def update_doctor_access_buttons(self, frame, doctor, doctor_address, patient_address, patient_private_key):
         try:
-            is_authorized = self.doctor_contract.functions.isAuthorized(
-                doctor_address,
-                patient_address
-            ).call()
+            is_authorized = self.doctor_contract.functions.isAuthorized(doctor_address, patient_address).call()
 
             # Remove any existing buttons
             for widget in frame.winfo_children():
@@ -1522,11 +1493,7 @@ class HealthcareDApp:
 
             if is_authorized:
                 def revoke_access():
-                    success, message = self.revoke_doctor_access(
-                        doctor_address,
-                        patient_address,
-                        patient_private_key
-                    )
+                    success, message = self.revoke_doctor_access( doctor_address, patient_address, patient_private_key)
 
                     # Show status message
                     status_label = ctk.CTkLabel(frame, text=message)
@@ -1536,31 +1503,18 @@ class HealthcareDApp:
                         # Refresh the button after 2 seconds
                         self.root.after(2000, lambda: [
                             status_label.destroy(),
-                            self.update_doctor_access_buttons(
-                                frame,
-                                doctor,
-                                doctor_address,
-                                patient_address,
-                                patient_private_key
-                            )
+                            self.update_doctor_access_buttons(frame, doctor, doctor_address,
+                                patient_address, patient_private_key)
                         ])
                     else:
                         self.root.after(2000, status_label.destroy)
 
-                ctk.CTkButton(
-                    frame,
-                    text="Revoke Access",
-                    fg_color="red",
-                    command=revoke_access
-                ).pack(side="right", padx=5)
+                ctk.CTkButton(frame, text="Revoke Access", fg_color="red", command=revoke_access
+                              ).pack(side="right", padx=5)
 
             else:
                 def grant_access():
-                    success, message = self.grant_doctor_access(
-                        doctor_address,
-                        patient_address,
-                        patient_private_key
-                    )
+                    success, message = self.grant_doctor_access(doctor_address, patient_address, patient_private_key)
 
                     # Show status message
                     status_label = ctk.CTkLabel(frame, text=message)
@@ -1570,26 +1524,18 @@ class HealthcareDApp:
                         # Refresh the button after 2 seconds
                         self.root.after(2000, lambda: [
                             status_label.destroy(),
-                            self.update_doctor_access_buttons(
-                                frame,
-                                doctor,
-                                doctor_address,
-                                patient_address,
-                                patient_private_key
-                            )
+                            self.update_doctor_access_buttons(frame, doctor, doctor_address,
+                                patient_address, patient_private_key)
                         ])
                     else:
                         self.root.after(2000, status_label.destroy)
 
-                ctk.CTkButton(
-                    frame,
-                    text="Grant Access",
-                    command=grant_access
-                ).pack(side="right", padx=5)
+                ctk.CTkButton(frame, text="Grant Access", command=grant_access).pack(side="right", padx=5)
 
         except Exception as e:
             print(f"Error updating doctor access buttons: {e}")
             ctk.CTkButton(frame, text="Error", state="disabled").pack(side="right", padx=5)
+
     def update_medical_record(self, patient_address, old_ipfs_hash, doctor_address, doctor_private_key, title, resume):
         try:
             file_path = filedialog.askopenfilename(
@@ -1639,8 +1585,8 @@ class HealthcareDApp:
 
 
 if __name__ == "__main__":
-        try:
-            app = HealthcareDApp()
-            app.run()
-        except Exception as e:
-            print(f"Error starting application: {e}")
+    try:
+        app = HealthcareDApp()
+        app.run()
+    except Exception as e:
+        print(f"Error starting application: {e}")
