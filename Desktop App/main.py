@@ -163,8 +163,8 @@ class HealthcareDApp:
             if os.name == 'nt':  # Windows
                 os.startfile(file_path)
             elif os.name == 'posix':  # Linux/Mac
-                import subprocess
                 subprocess.run(['xdg-open' if sys.platform.startswith('linux') else 'open', file_path], check=True)
+
         except Exception as e:
             print(f"Error opening file with default application: {e}")
             # Optionally, show a message to the user
@@ -299,43 +299,43 @@ class HealthcareDApp:
     def show_login_page(self):
         self.clear_window()
 
-        ctk.CTkLabel(self.root, text="Login Page", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text="Login Page", font=("Helvetica", 30, "bold")).pack(pady=30)
 
-        self.username_entry = ctk.CTkEntry(self.root, placeholder_text="Username", width=250)
-        self.username_entry.pack(pady=10)
+        # Load an image and Display it
+        userimage = ctk.CTkImage(Image.open("imgs/user_logo.png"), size=(200, 200))
+        ctk.CTkLabel(self.root, image=userimage, text="").pack(pady=20)
 
-        self.password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*", width=250)
-        self.password_entry.pack(pady=10)
+        self.username_entry = ctk.CTkEntry(self.root, placeholder_text="Username", fg_color="#0A97B0", font=("Helvetica", 20), width=250)
+        self.username_entry.pack(pady=15)
 
-        ctk.CTkButton(self.root, text="Login", command=self.login).pack(pady=10)
+        self.password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", fg_color="#0A97B0", font=("", 20), show="*", width=250)
+        self.password_entry.pack(pady=15)
+
+        ctk.CTkButton(self.root, text="Login", width=250, command=self.login, font=("Helvetica", 20, "bold"), 
+                      fg_color="#AB4459", hover_color="#F26B0F",corner_radius=10, border_width=2).pack(pady=20)
 
     def show_admin_page(self):
         self.clear_window()
 
-        # Main title
         ctk.CTkLabel(self.root, text="Admin Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        # Admin Actions at the top
         actions_frame = ctk.CTkFrame(self.root)
         actions_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(actions_frame, text="Admin Actions", font=("Helvetica", 16, "bold")).pack(pady=5)
+        ctk.CTkLabel(actions_frame, text="Admin Actions", font=("Helvetica", 18, "bold")).pack(pady=5)
 
         button_frame = ctk.CTkFrame(actions_frame)
         button_frame.pack(pady=5, padx=5, fill="y")
 
         # Create a horizontal layout for buttons
-        ctk.CTkButton(button_frame, text="Register Doctor",
-                      command=lambda: self.show_registration_page("doctor"),
-                      width=120).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="Register Doctor", command=lambda: self.show_registration_page("doctor"),
+                      font=('', 16, "bold"), width=150).pack(side="left", padx=10)
 
-        ctk.CTkButton(button_frame, text="Register Patient",
-                      command=lambda: self.show_registration_page("patient"),
-                      width=120).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="Register Patient", command=lambda: self.show_registration_page("patient"),
+                      font=('', 16, "bold"), width=150).pack(side="left", padx=10)
 
-        ctk.CTkButton(button_frame, text="View Full Audit Log",
-                      command=self.show_audit_page,
-                      width=120).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="View Full Audit Log", command=self.show_audit_page,
+                      font=('', 16, "bold"), width=150).pack(side="left", padx=10)
 
         # Create scrollable frame for statistics and activity
         main_frame = ctk.CTkScrollableFrame(self.root, width=380, height=450)
@@ -361,19 +361,15 @@ class HealthcareDApp:
             doctor_frame = ctk.CTkFrame(stats_grid)
             doctor_frame.pack(pady=5, padx=5, fill="x")
 
-            ctk.CTkLabel(doctor_frame, text="👨‍⚕️ Total Doctors",
-                         font=("Helvetica", 14)).pack(side="left", padx=10)
-            ctk.CTkLabel(doctor_frame, text=str(len(doctors)),
-                         font=("Helvetica", 14, "bold")).pack(side="right", padx=10)
+            ctk.CTkLabel(doctor_frame, text="👨‍⚕️ Total Doctors", font=("Helvetica", 16)).pack(side="left", padx=10)
+            ctk.CTkLabel(doctor_frame, text=str(len(doctors)), font=("Helvetica", 16, "bold")).pack(side="right", padx=10)
 
             # Patients count with icon
             patient_frame = ctk.CTkFrame(stats_grid)
             patient_frame.pack(pady=5, padx=5, fill="x")
 
-            ctk.CTkLabel(patient_frame, text="🏥 Total Patients",
-                         font=("Helvetica", 14)).pack(side="left", padx=10)
-            ctk.CTkLabel(patient_frame, text=str(len(patients)),
-                         font=("Helvetica", 14, "bold")).pack(side="right", padx=10)
+            ctk.CTkLabel(patient_frame, text="🏥 Total Patients", font=("Helvetica", 16)).pack(side="left", padx=10)
+            ctk.CTkLabel(patient_frame, text=str(len(patients)), font=("Helvetica", 16, "bold")).pack(side="right", padx=10)
 
             # Get total records count
             total_records = 0
@@ -399,36 +395,29 @@ class HealthcareDApp:
             records_frame = ctk.CTkFrame(stats_grid)
             records_frame.pack(pady=5, padx=5, fill="x")
 
-            ctk.CTkLabel(records_frame, text="📄 Total Records",
-                         font=("Helvetica", 14)).pack(side="left", padx=10)
-            ctk.CTkLabel(records_frame, text=str(total_records),
-                         font=("Helvetica", 14, "bold")).pack(side="right", padx=10)
+            ctk.CTkLabel(records_frame, text="📄 Total Records", font=("Helvetica", 16)).pack(side="left", padx=10)
+            ctk.CTkLabel(records_frame, text=str(total_records), font=("Helvetica", 16, "bold")).pack(side="right", padx=10)
 
             # Active records count
             active_records_frame = ctk.CTkFrame(stats_grid)
             active_records_frame.pack(pady=5, padx=5, fill="x")
 
-            ctk.CTkLabel(active_records_frame, text="✅ Active Records",
-                         font=("Helvetica", 14)).pack(side="left", padx=10)
-            ctk.CTkLabel(active_records_frame, text=str(active_records),
-                         font=("Helvetica", 14, "bold")).pack(side="right", padx=10)
+            ctk.CTkLabel(active_records_frame, text="✅ Active Records", font=("Helvetica", 16)).pack(side="left", padx=10)
+            ctk.CTkLabel(active_records_frame, text=str(active_records), font=("Helvetica", 16, "bold")).pack(side="right", padx=10)
 
             # Average records per doctor
             avg_records = total_records / len(doctors) if doctors else 0
             avg_frame = ctk.CTkFrame(stats_grid)
             avg_frame.pack(pady=5, padx=5, fill="x")
 
-            ctk.CTkLabel(avg_frame, text="📊 Avg Records/Doctor",
-                         font=("Helvetica", 14)).pack(side="left", padx=10)
-            ctk.CTkLabel(avg_frame, text=f"{avg_records:.1f}",
-                         font=("Helvetica", 14, "bold")).pack(side="right", padx=10)
+            ctk.CTkLabel(avg_frame, text="📊 Avg Records/Doctor", font=("Helvetica", 16)).pack(side="left", padx=10)
+            ctk.CTkLabel(avg_frame, text=f"{avg_records:.1f}", font=("Helvetica", 16, "bold")).pack(side="right", padx=10)
 
             # Recent Activity Section
             activity_frame = ctk.CTkFrame(main_frame)
             activity_frame.pack(pady=10, padx=5, fill="x")
 
-            ctk.CTkLabel(activity_frame, text="Recent Activity",
-                         font=("Helvetica", 16, "bold")).pack(pady=5)
+            ctk.CTkLabel(activity_frame, text="Recent Activity", font=("Helvetica", 16, "bold")).pack(pady=5)
 
             try:
                 # Get last 5 audit records
@@ -451,12 +440,13 @@ class HealthcareDApp:
                             actor_name = audit[0]
                             subject_name = audit[2]
 
-                        action_text = f"{timestamp}\n{actor_name}: {audit[1]}"
-                        if subject_name != audit[2]:  # If we got a readable name
-                            action_text += f" - {subject_name}"
+                        action_text = f"Actor : {actor_name} -> Action : {audit[1]} "
+                        if subject_name != audit[2]:
+                            action_text += f"- Subject : {subject_name} "
+                        
+                        action_text += f'- Date : {str(timestamp)}'
 
-                        ctk.CTkLabel(audit_frame, text=action_text,
-                                     justify="left").pack(pady=2, padx=5)
+                        ctk.CTkLabel(audit_frame, text=action_text, justify="left", font=('', 14)).pack(pady=2, padx=5)
                 else:
                     ctk.CTkLabel(activity_frame, text="No recent activity").pack(pady=5)
 
@@ -470,42 +460,44 @@ class HealthcareDApp:
             ctk.CTkLabel(main_frame, text=error_msg).pack(pady=5)
 
         # Logout button
-        ctk.CTkButton(self.root, text="Logout",
-                      command=self.show_login_page,
-                      width=100).pack(pady=10)
+        ctk.CTkButton(self.root, text="Logout", command=self.show_login_page, width=100).pack(pady=10)
 
     def show_registration_page(self, role):
         self.clear_window()
 
-        ctk.CTkLabel(self.root, text=f"Register {role.capitalize()}", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Register {role.capitalize()}", font=("Helvetica", 25, "bold")).pack(pady=10)
 
-        username_entry = ctk.CTkEntry(self.root, placeholder_text="Username", width=250)
-        username_entry.pack(pady=10)
+        # Load an image and Display it
+        userimage = ctk.CTkImage(Image.open("imgs/register_logo.png"), size=(200, 200))
+        ctk.CTkLabel(self.root, image=userimage, text="").pack(pady=20)
 
-        password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*", width=250)
-        password_entry.pack(pady=10)
+        username_entry = ctk.CTkEntry(self.root, placeholder_text="Username", fg_color="#0A97B0", 
+                                      font=("Helvetica", 20), width=300)
+        username_entry.pack(pady=15)
 
-        private_key_entry = ctk.CTkEntry(self.root, placeholder_text="Private Key (0x...)", width=300)
-        private_key_entry.pack(pady=10)
+        password_entry = ctk.CTkEntry(self.root, placeholder_text="Password", show="*", fg_color="#0A97B0", 
+                                      font=("Helvetica", 20), width=300)
+        password_entry.pack(pady=15)
 
-        ctk.CTkButton(
-            self.root,
-            text="Register",
-            command=lambda: self.register_user(
-                username_entry.get(),
-                password_entry.get(),
-                private_key_entry.get(),
-                role
-            ), width=200
-        ).pack(pady=10)
+        private_key_entry = ctk.CTkEntry(self.root, placeholder_text="Private Key (0x...)", fg_color="#0A97B0", 
+                                      font=("Helvetica", 20), width=300)
+        private_key_entry.pack(pady=15)
 
-        ctk.CTkButton(self.root, text="Back", command=self.show_admin_page, width=250).pack(pady=10)
+        ctk.CTkButton(self.root, text="Register", width=300, font=("Helvetica", 20, "bold"), fg_color="#AB4459", 
+                    hover_color="#F26B0F",corner_radius=10, border_width=2, 
+                    command=lambda: self.register_user(
+                        username_entry.get(), password_entry.get(), 
+                        private_key_entry.get(), role
+                    )).pack(pady=10)
+
+        ctk.CTkButton(self.root, text="Back", command=self.show_admin_page, width=300, fg_color="#AB4459", 
+                font=("Helvetica", 20, "bold"), hover_color="#F26B0F",corner_radius=10, border_width=2,).pack(pady=10)
 
     def clear_window(self):
         for widget in self.root.winfo_children():
             widget.destroy()
 
-    def login(self):
+    """ def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
 
@@ -521,8 +513,8 @@ class HealthcareDApp:
                     self.show_patient_page(username)
                 return
 
-        error_label = ctk.CTkLabel(self.root, text="Invalid credentials")
-        error_label.pack(pady=10)
+        error_label = ctk.CTkLabel(self.root, text="Invalid credentials", text_color='red')
+        error_label.pack(pady=15) """
 
     def register_user(self, username, password, private_key, role):
         try:
@@ -957,10 +949,8 @@ class HealthcareDApp:
         self.current_username = username  
 
         # Main title
-        ctk.CTkLabel(self.root, text=f"Patient Dashboard",
-                     font=("Helvetica", 20, "bold")).pack(pady=10)
-        ctk.CTkLabel(self.root, text=f"Welcome {username}",
-                     font=("Helvetica", 18, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Patient Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Welcome {username}", font=("Helvetica", 18, "bold")).pack(pady=10)
 
         # Get patient's data and address
         data = self.load_encrypted_data()
@@ -977,7 +967,7 @@ class HealthcareDApp:
 
         doctors_header = ctk.CTkFrame(doctors_section)
         doctors_header.pack(pady=5, padx=5, fill="x")
-        ctk.CTkLabel(doctors_header, text="Available Doctors",
+        ctk.CTkLabel(doctors_header, text="Available Doctors", 
                      font=("Helvetica", 18, "bold")).pack(side="left", pady=5)
 
         # Get all users and filter doctors
@@ -1005,11 +995,7 @@ class HealthcareDApp:
                 button_frame.pack(side="right", padx=5, pady=5)
 
                 try:
-                    is_authorized = self.doctor_contract.functions.isAuthorized(
-                        doctor_address,
-                        patient_address
-                    ).call()
-
+                    is_authorized = self.doctor_contract.functions.isAuthorized(doctor_address, patient_address).call()
                     if is_authorized:
 
                         def revoke_access(doc_addr=doctor_address):
@@ -1027,21 +1013,12 @@ class HealthcareDApp:
                             else:
                                 self.root.after(2000, status_label.destroy)
 
-                        revoke_btn = ctk.CTkButton(
-                            button_frame,
-                            text="Revoke Access",
-                            fg_color="red",
-                            hover_color="darkred",
-                            command=revoke_access
-                        )
+                        revoke_btn = ctk.CTkButton(button_frame, text="Revoke Access", fg_color="red",
+                            hover_color="darkred", command=revoke_access)
                         revoke_btn.pack(side="right", padx=5)
 
                         # Add status indicator
-                        ctk.CTkLabel(
-                            info_frame,
-                            text="✓ Has Access",
-                            text_color="green"
-                        ).pack(side="right", padx=5)
+                        ctk.CTkLabel(info_frame, text="✓ Has Access", text_color="green").pack(side="right", padx=5)
 
                     else:
 
@@ -1206,7 +1183,7 @@ class HealthcareDApp:
         except Exception as e:
                 error_label = ctk.CTkLabel(self.root, text=f"Error granting access: {str(e)}")
                 error_label.pack(pady=10)
-
+    """     # ????????????
     def show_medical_record_details(self, record, doctor_name, timestamp):
         # Create a new window for record details
         detail_window = ctk.CTkToplevel(self.root)
@@ -1278,7 +1255,7 @@ class HealthcareDApp:
                 return self.doctor_contract.functions.isAuthorized(doctor_address, patient_address).call()
             except Exception:
                 return False
-
+    """
     def show_audit_page(self):
         self.clear_window()
 
@@ -1441,9 +1418,9 @@ class HealthcareDApp:
                     self.show_patient_page(username)
                 return
 
-        error_label = ctk.CTkLabel(self.root, text="Invalid credentials")
+        error_label = ctk.CTkLabel(self.root, text="Invalid credentials", text_color='red' , font=("", 16))
         error_label.pack(pady=10)
-        self.root.after(3000, error_label.destroy)  # Remove error message after 2 seconds
+        self.root.after(3000, error_label.destroy)
 
     def run(self):
             self.current_username = None
