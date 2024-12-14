@@ -7,7 +7,7 @@ import requests
 import mimetypes
 import subprocess
 from web3 import Web3
-from PIL import Image
+from PIL import Image, ImageTk
 import customtkinter as ctk
 from eth_account import Account
 import tkinter.filedialog as filedialog
@@ -121,9 +121,9 @@ class HealthcareDApp:
             raise Exception("ABI files not found! Please ensure they exist in the same directory.")
 
         # Contract details (update addresses after deployment)
-        self.doctor_contract_address = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-        self.patient_contract_address = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
-        self.audit_contract_address = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+        self.doctor_contract_address = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
+        self.patient_contract_address = "0x0B306BF915C4d645ff596e518fAf3F9669b97016"
+        self.audit_contract_address = "0x9A676e781A523b5d0C0e43731313A708CB607508"
 
 
         self.doctor_contract = self.w3.eth.contract(address=self.doctor_contract_address, abi=doctor_abi)
@@ -288,6 +288,8 @@ class HealthcareDApp:
             return False, f"Error uploading file: {str(e)}"
 
     def setup_gui(self):
+        ctk.set_appearance_mode("dark") 
+        ctk.set_default_color_theme("blue")
         self.root = ctk.CTk()
         self.root.title("Healthcare DApp")
         self.root.geometry("600x600")
@@ -311,29 +313,45 @@ class HealthcareDApp:
 
         ctk.CTkButton(self.root, text="Login", width=250, command=self.login, font=("Helvetica", 20, "bold"), 
                       fg_color="#AB4459", hover_color="#F26B0F",corner_radius=10, border_width=2).pack(pady=20)
+        
+        # Switcher button
+        self.switch_button = ctk.CTkButton(self.root, text="Switch to Light Mode", command=self.toggle_mode, width=250,
+            font=("Helvetica", 20, "bold"), fg_color="#AB4459", hover_color="#F26B0F",corner_radius=10, border_width=2)
+        self.switch_button.pack(pady=20)
+
+    def toggle_mode(self):
+        current_mode = ctk.get_appearance_mode()
+        if current_mode == "Dark":
+            ctk.set_appearance_mode("light")
+            self.switch_button.configure(text="Switch to Dark Mode")
+        else:
+            ctk.set_appearance_mode("dark")
+            self.switch_button.configure(text="Switch to Light Mode")
 
     def show_admin_page(self):
         self.clear_window()
 
-        ctk.CTkLabel(self.root, text="Admin Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text="Admin Dashboard", font=("Helvetica", 25, "bold")).pack(pady=10)
+        ctk.CTkButton(self.root, text="Logout", command=self.show_login_page, width=100,
+                      font=('Helvetica', 14, "bold"), hover_color="#F26B0F").pack(pady=2)
 
         actions_frame = ctk.CTkFrame(self.root)
         actions_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(actions_frame, text="Admin Actions", font=("Helvetica", 18, "bold")).pack(pady=5)
+        ctk.CTkLabel(actions_frame, text="Admin Actions", font=("Helvetica", 16, "bold")).pack(pady=5)
 
         button_frame = ctk.CTkFrame(actions_frame)
         button_frame.pack(pady=5, padx=5, fill="y")
 
         # Create a horizontal layout for buttons
         ctk.CTkButton(button_frame, text="Register Doctor", command=lambda: self.show_registration_page("doctor"),
-                      font=('', 16, "bold"), width=150).pack(side="left", padx=10)
+                      font=('', 16, "bold"), width=150, fg_color='#9694FF', hover_color="#D91656").pack(side="left", padx=10)
 
         ctk.CTkButton(button_frame, text="Register Patient", command=lambda: self.show_registration_page("patient"),
-                      font=('', 16, "bold"), width=150).pack(side="left", padx=10)
+                      font=('', 16, "bold"), width=150, fg_color='#9694FF', hover_color="#D91656").pack(side="left", padx=10)
 
         ctk.CTkButton(button_frame, text="View Full Audit Log", command=self.show_audit_page,
-                      font=('', 16, "bold"), width=150).pack(side="left", padx=10)
+                      font=('', 16, "bold"), width=150, fg_color='#9694FF', hover_color="#D91656").pack(side="left", padx=10)
 
         # Create scrollable frame for statistics and activity
         main_frame = ctk.CTkScrollableFrame(self.root, width=380, height=450)
@@ -457,9 +475,6 @@ class HealthcareDApp:
             print(f"Detailed error: {error_msg}")
             ctk.CTkLabel(main_frame, text=error_msg).pack(pady=5)
 
-        # Logout button
-        ctk.CTkButton(self.root, text="Logout", command=self.show_login_page, width=100).pack(pady=10)
-
     def show_registration_page(self, role):
         self.clear_window()
 
@@ -494,25 +509,6 @@ class HealthcareDApp:
     def clear_window(self):
         for widget in self.root.winfo_children():
             widget.destroy()
-
-    """ def login(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-
-        data = self.load_encrypted_data()
-
-        for user in data['users']:
-            if user['username'] == username and user['password'] == self.hash_password(password):
-                if user['role'] == 'admin':
-                    self.show_admin_page()
-                elif user['role'] == 'doctor':
-                    self.show_doctor_page(username)
-                elif user['role'] == 'patient':
-                    self.show_patient_page(username)
-                return
-
-        error_label = ctk.CTkLabel(self.root, text="Invalid credentials", text_color='red')
-        error_label.pack(pady=15) """
 
     def register_user(self, username, password, private_key, role):
         try:
@@ -1220,8 +1216,10 @@ class HealthcareDApp:
         nav_frame = ctk.CTkFrame(header_frame)
         nav_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkButton(nav_frame, text="Back to Dashboard", command=self.show_admin_page,  width=150).pack(side="left", padx=10)
-        ctk.CTkButton(nav_frame, text="Export Log", command=self.export_logs_to_file, width=100).pack(side="right", padx=10)
+        ctk.CTkButton(nav_frame, text="Back to Dashboard", command=self.show_admin_page,  width=150, 
+                      font=('', 13), hover_color="#F26B0F").pack(side="left", padx=10)
+        ctk.CTkButton(nav_frame, text="Export Log", command=self.export_logs_to_file, width=100, 
+                      font=('', 13), hover_color="#F26B0F").pack(side="right", padx=10)
 
         # Create main scrollable frame for audit logs
         audit_frame = ctk.CTkScrollableFrame(self.root, width=380, height=400)
