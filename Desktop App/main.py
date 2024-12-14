@@ -52,16 +52,14 @@ class IPFSStorage:
             
             # Use requests.get() with a timeout
             response = requests.get(url, stream=True, timeout=30)
-            print(f"Retrieving file: {ipfs_hash} to {output_path}")
-            print(f"Response status: {response.status_code}")
+            print(f"Retrieving file: {ipfs_hash} to {output_path} | Response status: {response.status_code}")
 
             if response.status_code == 200:
                 # Ensure the directory exists with full permissions
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 
-                # Attempt to set full permissions on the directory
+                # Try to change directory permissions
                 try:
-                    # Try to change directory permissions
                     os.chmod(os.path.dirname(output_path), 0o777)
                 except Exception as perm_error:
                     print(f"Could not change directory permissions: {perm_error}")
@@ -448,7 +446,7 @@ class HealthcareDApp:
 
                         ctk.CTkLabel(audit_frame, text=action_text, justify="left", font=('', 14)).pack(pady=2, padx=5)
                 else:
-                    ctk.CTkLabel(activity_frame, text="No recent activity").pack(pady=5)
+                    ctk.CTkLabel(activity_frame, text="No recent activity", font=('', 14)).pack(pady=5)
 
             except Exception as e:
                 print(f"Error loading audit trail: {e}")
@@ -590,13 +588,14 @@ class HealthcareDApp:
             error_label = ctk.CTkLabel(self.root, text=f"Error: {str(e)}")
             error_label.pack(pady=10)
         except Exception as e:
-            error_label = ctk.CTkLabel(self.root, text=f"Error: Invalid private key or registration failed")
+            error_label = ctk.CTkLabel(self.root, text=f"Error: Invalid private key or registration failed", 
+                                       text_color='red', font=('', 14))
             error_label.pack(pady=10)
 
     def show_doctor_page(self, username):
         self.clear_window()
-        ctk.CTkLabel(self.root, text=f"Doctor Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
-        ctk.CTkLabel(self.root, text=f"Welcome Dr. {username}", font=("Helvetica", 16, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Doctor Dashboard : Dr. {username}", font=("Helvetica", 20, "bold")).pack(pady=10)
+        # ctk.CTkLabel(self.root, text=f"Dr. {username}", font=("Helvetica", 16, "bold")).pack(pady=10)
 
         # Get doctor's address
         data = self.load_encrypted_data()
@@ -607,21 +606,22 @@ class HealthcareDApp:
         authorized_patients = self.doctor_contract.functions.getAuthorizedPatients(doctor_address).call()
 
         if not authorized_patients:
-            ctk.CTkLabel(self.root, text="You have no patients yet").pack(pady=10)
+            ctk.CTkLabel(self.root, text="You have no patients yet", font=('', 16)).pack(pady=10)
         else:
             patient_frame = ctk.CTkScrollableFrame(self.root, width=300, height=200)
             patient_frame.pack(pady=10, padx=10, fill="both", expand=True)
 
+            ctk.CTkLabel(patient_frame, text="Your Patients", font=('', 18)).pack(pady=10)
+
             for patient_address in authorized_patients:
                 try:
                     patient_info = self.patient_contract.functions.getPatient(patient_address).call()
-                    patient_button = ctk.CTkButton(
-                        patient_frame,
-                        text=f"Patient: {patient_info[0]}",
+                    ctk.CTkButton( patient_frame, text=f"Patient: {patient_info[0]}",
                         command=lambda addr=patient_address, name=patient_info[0]:
-                        self.show_patient_record_page(addr, name, username, doctor_address)
-                    )
-                    patient_button.pack(pady=5, fill="x")
+                        self.show_patient_record_page(addr, name, username, doctor_address), 
+                        font=("Helvetica", 18, "bold"), 
+                    ).pack(pady=5, fill="x")
+
                 except Exception as e:
                     print(f"Error loading patient {patient_address}: {e}")
 
@@ -631,9 +631,8 @@ class HealthcareDApp:
         self.clear_window()
 
         # Main title
-        ctk.CTkLabel(self.root, text=f"Medical Records for {patient_name}",
-                     font=("Helvetica", 18, "bold")).pack(pady=10)
-
+        ctk.CTkLabel(self.root, text=f"Medical Records for '{patient_name}'", font=("Helvetica", 18, "bold")).pack(pady=10)
+        ctk.CTkButton(self.root, text="Logout", command=self.show_login_page, font=('', 14), hover_color="#F26B0F").pack(pady=2)
         # Get doctor's data for authentication
         data = self.load_encrypted_data()
         doctor_data = next(user for user in data['users'] if user['username'] == doctor_username)
@@ -644,21 +643,82 @@ class HealthcareDApp:
             # Filter records for current doctor
             doctor_records = [r for r in all_records if r[6].lower() == doctor_address.lower()]
 
+            headerFrame = ctk.CTkFrame(self.root)
+            headerFrame.pack(pady=5, padx=5, fill="x")
+
+            # Previous Records Header
+            ctk.CTkLabel(headerFrame, text="Previous Records", font=("Helvetica", 14, "bold")
+                         ).pack(side='left', pady=5, padx=10)
+
+            # Add Record Button
+            def show_add_record_popup():
+                add_record_window = ctk.CTkToplevel(self.root)
+                add_record_window.title("Add New Medical Record")
+                add_record_window.geometry("400x400")
+
+                new_record_frame = ctk.CTkFrame(add_record_window)
+                new_record_frame.pack(pady=10, padx=10, fill="both", expand=True)
+
+                ctk.CTkLabel(new_record_frame, text="Add New Record", font=("Helvetica", 16, "bold")).pack(pady=5)
+
+                # Title Entry
+                ctk.CTkLabel(new_record_frame, text="Title:").pack(pady=(5, 0))
+                title_entry = ctk.CTkEntry(new_record_frame, width=300)
+                title_entry.pack(pady=(0, 5))
+
+                # Description Entry
+                ctk.CTkLabel(new_record_frame, text="Description:").pack(pady=(5, 0))
+                resume_text = ctk.CTkTextbox(new_record_frame, width=300, height=100)
+                resume_text.pack(pady=(0, 5))
+
+                def submit_new_record():
+                    title = title_entry.get().strip()
+                    resume = resume_text.get("1.0", "end-1c").strip()
+
+                    if not title:
+                        error_label = ctk.CTkLabel(new_record_frame, text="Title is required", fg_color="red")
+                        error_label.pack(pady=5)
+                        add_record_window.after(2000, error_label.destroy)
+                        return
+
+                    success, message = self.upload_medical_file(
+                        patient_address,
+                        doctor_address,
+                        doctor_data['private_key'],
+                        title,
+                        resume
+                    )
+
+                    if success:
+                        self.add_audit_log(
+                            doctor_address,
+                            "RECORD_ADDED",
+                            patient_address,
+                            f"Added new medical record: {title}",
+                            doctor_data['private_key']
+                        )
+                        add_record_window.destroy()
+                        self.show_patient_record_page(patient_address, patient_name, doctor_username, doctor_address)
+                    else:
+                        error_label = ctk.CTkLabel(new_record_frame, text=message, fg_color="red")
+                        error_label.pack(pady=5)
+                        add_record_window.after(2000, error_label.destroy)
+
+                ctk.CTkButton(new_record_frame, text="Submit New Record", command=submit_new_record).pack(pady=5)
+
+            ctk.CTkButton(headerFrame, text="Add Record", command=show_add_record_popup, font=('', 14), 
+                          fg_color="#F26B0F", hover_color='#6A669D').pack(side='right', pady=5, padx=10)
+
             # Create main frame for records
             main_frame = ctk.CTkScrollableFrame(self.root, width=380, height=400)
             main_frame.pack(pady=5, padx=10, fill="both", expand=True)
 
-            # Previous Records Header
-            ctk.CTkLabel(main_frame, text="Previous Records",
-                         font=("Helvetica", 14, "bold")).pack(pady=5)
-
             if not doctor_records:
-                ctk.CTkLabel(main_frame, text="No previous records",
-                             font=("Helvetica", 12)).pack(pady=5)
+                ctk.CTkLabel(main_frame, text="No previous records", font=("Helvetica", 14)).pack(pady=5)
             else:
                 for record in doctor_records:
-                    if record[7]:  # Check if record is active
-                        record_frame = ctk.CTkFrame(main_frame)
+                    if record[7]:  # is record active
+                        record_frame = ctk.CTkFrame(main_frame, corner_radius=10, border_width=2, border_color="#0A97B0")
                         record_frame.pack(pady=5, padx=5, fill="x")
 
                         # Get record details
@@ -673,16 +733,8 @@ class HealthcareDApp:
                         # Title and file info in one line
                         info_line = ctk.CTkFrame(record_frame)
                         info_line.pack(pady=(5, 0), padx=5, fill="x")
-                        ctk.CTkLabel(info_line, text=title,
-                                     font=("Helvetica", 13, "bold")).pack(side="left", padx=5)
-                        ctk.CTkLabel(info_line, text=f"{file_name}",
-                                     font=("Helvetica", 12)).pack(side="right", padx=5)
-
-                        # Date
-                        date_line = ctk.CTkFrame(record_frame)
-                        date_line.pack(pady=(2, 0), padx=5, fill="x")
-                        ctk.CTkLabel(date_line, text=f"Date: {timestamp}",
-                                     font=("Helvetica", 12)).pack(side="left", padx=5)
+                        ctk.CTkLabel(info_line, text=f"Record Title : {title}", font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
+                        ctk.CTkLabel(info_line, text=f"File Name : {file_name} | Date: {timestamp}", font=("Helvetica", 12)).pack(side="right", padx=20)
 
                         # Description (only if not empty)
                         if resume.strip():
@@ -709,8 +761,7 @@ class HealthcareDApp:
                             history_frame = ctk.CTkScrollableFrame(history_window, width=380, height=400)
                             history_frame.pack(pady=10, padx=10, fill="both", expand=True)
 
-                            ctk.CTkLabel(history_frame, text="Version History",
-                                         font=("Helvetica", 16, "bold")).pack(pady=5)
+                            ctk.CTkLabel(history_frame, text="Version History", font=("Helvetica", 18, "bold")).pack(pady=5)
 
                             try:
                                 version_chain = []
@@ -730,13 +781,12 @@ class HealthcareDApp:
                                     version_frame = ctk.CTkFrame(history_frame)
                                     version_frame.pack(pady=5, padx=5, fill="x")
 
-                                    version_time = datetime.datetime.fromtimestamp(version[5]).strftime(
-                                        '%Y-%m-%d %H:%M:%S')
+                                    version_time = datetime.datetime.fromtimestamp(version[5]).strftime('%Y-%m-%d %H:%M:%S')
 
                                     # Version info
-                                    ctk.CTkLabel(version_frame, text=f"Title: {version[3]}",
-                                                 font=("Helvetica", 12, "bold")).pack(anchor="w", padx=5)
-                                    ctk.CTkLabel(version_frame, text=f"Date: {version_time}").pack(anchor="w", padx=5)
+                                    ctk.CTkLabel(version_frame, text=f"Title: {version[3]}", font=("Helvetica", 16, "bold")).pack(anchor="w", padx=5)
+                                    ctk.CTkLabel(version_frame, text=f"File Name: {version[2]}", font=("Helvetica", 14, "bold")).pack(anchor="w", padx=5)
+                                    ctk.CTkLabel(version_frame, text=f"Date: {version_time}", font=("Helvetica", 14, "bold")).pack(anchor="w", padx=5)
 
                                     if version[4].strip():  # If has description
                                         desc_text = ctk.CTkTextbox(version_frame, height=40)
@@ -748,16 +798,15 @@ class HealthcareDApp:
                                     def view_version(v_hash=version[0], v_type=version[1], v_name=version[2]):
                                         self.view_medical_file(v_hash, v_type, v_name)
 
-                                    ctk.CTkButton(version_frame, text="View This Version",
-                                                  command=view_version).pack(pady=2, padx=5)
+                                    ctk.CTkButton(version_frame, text="View This Version", command=view_version, width=250, 
+                                                  font=('', 16)).pack(pady=2, padx=5)
 
                             except Exception as e:
                                 error_msg = f"Error loading version history: {str(e)}"
                                 ctk.CTkLabel(history_frame, text=error_msg).pack(pady=5)
 
                             # Close button
-                            ctk.CTkButton(history_window, text="Close",
-                                          command=history_window.destroy).pack(pady=10)
+                            ctk.CTkButton(history_window, text="Close", command=history_window.destroy, font=('', 16)).pack(pady=10)
 
                         def update_record(record_hash=ipfs_hash, record_title=title, record_resume=resume):
                             update_window = ctk.CTkToplevel(self.root)
@@ -780,14 +829,8 @@ class HealthcareDApp:
                             resume_text.insert("1.0", record_resume)
 
                             def submit_update():
-                                success, message = self.update_medical_record(
-                                    patient_address,
-                                    record_hash,
-                                    doctor_address,
-                                    doctor_data['private_key'],
-                                    title_entry.get(),
-                                    resume_text.get("1.0", "end-1c")
-                                )
+                                success, message = self.update_medical_record( patient_address, record_hash, doctor_address,
+                                    doctor_data['private_key'], title_entry.get(), resume_text.get("1.0", "end-1c") )
 
                                 if success:
                                     self.add_audit_log(
@@ -798,8 +841,7 @@ class HealthcareDApp:
                                         doctor_data['private_key']
                                     )
                                     update_window.destroy()
-                                    self.show_patient_record_page(patient_address, patient_name, doctor_username,
-                                                                  doctor_address)
+                                    self.show_patient_record_page(patient_address, patient_name, doctor_username, doctor_address)
                                 else:
                                     status_label = ctk.CTkLabel(update_frame, text=message)
                                     status_label.pack(pady=5)
@@ -809,72 +851,17 @@ class HealthcareDApp:
                                           command=submit_update).pack(pady=5)
 
                         # View File button
-                        ctk.CTkButton(button_frame, text="View File",
-                                      command=view_file,
-                                      width=80).pack(side="left", padx=2)
+                        ctk.CTkButton(button_frame, text="View File", command=view_file, width=80, font=('', 12), 
+                                      hover_color="#F26B0F").pack(side="left", padx=2)
 
-                        # History button (only if has previous versions)
+                        # History button
                         if has_previous:
-                            ctk.CTkButton(button_frame, text="History",
-                                          command=view_history,
-                                          width=80).pack(side="left", padx=2)
+                            ctk.CTkButton(button_frame, text="History", command=view_history, width=80, 
+                                          font=('', 12), hover_color="#F26B0F").pack(side="left", padx=2)
 
                         # Update Record button
-                        ctk.CTkButton(button_frame, text="Update Record",
-                                      command=update_record,
-                                      width=100).pack(side="right", padx=2)
-
-            # Add New Record section
-            new_record_frame = ctk.CTkFrame(main_frame)
-            new_record_frame.pack(pady=10, padx=5, fill="x")
-
-            ctk.CTkLabel(new_record_frame, text="Add New Record",
-                         font=("Helvetica", 14, "bold")).pack(pady=5)
-
-            # Title Entry
-            ctk.CTkLabel(new_record_frame, text="Title:").pack(pady=(5, 0))
-            title_entry = ctk.CTkEntry(new_record_frame, width=300)
-            title_entry.pack(pady=(0, 5))
-
-            # Description Entry
-            ctk.CTkLabel(new_record_frame, text="Description:").pack(pady=(5, 0))
-            resume_text = ctk.CTkTextbox(new_record_frame, width=300, height=100)
-            resume_text.pack(pady=(0, 5))
-
-            def submit_new_record():
-                title = title_entry.get().strip()
-                resume = resume_text.get("1.0", "end-1c").strip()
-
-                if not title:
-                    error_label = ctk.CTkLabel(new_record_frame, text="Title is required")
-                    error_label.pack(pady=5)
-                    self.root.after(2000, error_label.destroy)
-                    return
-
-                success, message = self.upload_medical_file(
-                    patient_address,
-                    doctor_address,
-                    doctor_data['private_key'],
-                    title,
-                    resume
-                )
-
-                if success:
-                    self.add_audit_log(
-                        doctor_address,
-                        "RECORD_ADDED",
-                        patient_address,
-                        f"Added new medical record: {title}",
-                        doctor_data['private_key']
-                    )
-                    self.show_patient_record_page(patient_address, patient_name, doctor_username, doctor_address)
-                else:
-                    error_label = ctk.CTkLabel(new_record_frame, text=message)
-                    error_label.pack(pady=5)
-                    self.root.after(2000, error_label.destroy)
-
-            ctk.CTkButton(new_record_frame, text="Submit New Record",
-                          command=submit_new_record).pack(pady=5)
+                        ctk.CTkButton(button_frame, text="Update Record", command=update_record, width=100, 
+                                      font=('', 12), hover_color="#F26B0F").pack(side="right", padx=2)
 
         except Exception as e:
             error_msg = f"Error loading records: {str(e)}"
@@ -885,13 +872,9 @@ class HealthcareDApp:
         button_frame = ctk.CTkFrame(self.root)
         button_frame.pack(pady=10, fill="x")
 
-        ctk.CTkButton(button_frame, text="Back to Patient List",
+        ctk.CTkButton(button_frame, text="Back to Patient List", fg_color='green',
                       command=lambda: self.show_doctor_page(doctor_username),
-                      width=150).pack(side="left", padx=10)
-
-        ctk.CTkButton(button_frame, text="Logout",
-                      command=self.show_login_page,
-                      width=100).pack(side="right", padx=10)
+                      width=150, font=('', 12), hover_color="#F26B0F").pack(padx=10)
 
     def show_version_history(self, patient_address, current_hash):
         """Show the version history of a medical record"""
@@ -949,8 +932,8 @@ class HealthcareDApp:
         self.current_username = username  
 
         # Main title
-        ctk.CTkLabel(self.root, text=f"Patient Dashboard", font=("Helvetica", 20, "bold")).pack(pady=10)
-        ctk.CTkLabel(self.root, text=f"Welcome {username}", font=("Helvetica", 18, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.root, text=f"Patient Dashboard : {username}", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkButton(self.root, text="Logout", command=self.show_login_page, font=('', 14), hover_color="#F26B0F").pack(pady=5)
 
         # Get patient's data and address
         data = self.load_encrypted_data()
@@ -981,14 +964,13 @@ class HealthcareDApp:
                 doctor_address = Account.from_key(doctor['private_key']).address
 
                 # Create frame for each doctor
-                doctor_frame = ctk.CTkFrame(doctors_section)
+                doctor_frame = ctk.CTkFrame(doctors_section, corner_radius=10, border_width=2, border_color="#0A97B0")
                 doctor_frame.pack(pady=5, padx=5, fill="x")
 
                 # Doctor info frame (left side)
                 info_frame = ctk.CTkFrame(doctor_frame)
                 info_frame.pack(side="left", fill="x", expand=True, padx=5, pady=5)
-                ctk.CTkLabel(info_frame, text=f"Dr. {doctor['username']}",
-                             font=("Helvetica", 14)).pack(side="left", padx=5)
+                ctk.CTkLabel(info_frame, text=f"Dr. {doctor['username']}", font=("Helvetica", 16)).pack(side="left", padx=5)
 
                 # Button frame (right side)
                 button_frame = ctk.CTkFrame(doctor_frame)
@@ -999,11 +981,7 @@ class HealthcareDApp:
                     if is_authorized:
 
                         def revoke_access(doc_addr=doctor_address):
-                            success, message = self.revoke_doctor_access(
-                                doc_addr,
-                                patient_address,
-                                patient_data['private_key']
-                            )
+                            success, message = self.revoke_doctor_access(doc_addr, patient_address, patient_data['private_key'])
 
                             status_label = ctk.CTkLabel(doctor_frame, text=message)
                             status_label.pack(side="right", padx=5)
@@ -1013,22 +991,17 @@ class HealthcareDApp:
                             else:
                                 self.root.after(2000, status_label.destroy)
 
-                        revoke_btn = ctk.CTkButton(button_frame, text="Revoke Access", fg_color="red",
+                        revoke_btn = ctk.CTkButton(button_frame, text="Revoke Access", fg_color="red", font=('', 16, 'bold'), 
                             hover_color="darkred", command=revoke_access)
                         revoke_btn.pack(side="right", padx=5)
 
                         # Add status indicator
-                        ctk.CTkLabel(info_frame, text="✓ Has Access", text_color="green").pack(side="right", padx=5)
+                        ctk.CTkLabel(info_frame, text="✓ Has Access", text_color="green", font=('', 16, 'bold')).pack(side="right", padx=5)
 
                     else:
 
                         def grant_access(doc_addr=doctor_address):
-                            success, message = self.grant_doctor_access(
-                                doc_addr,
-                                patient_address,
-                                patient_data['private_key']
-                            )
-
+                            success, message = self.grant_doctor_access( doc_addr, patient_address, patient_data['private_key'])
                             print('success, message : ', success, message)
 
                             status_label = ctk.CTkLabel(doctor_frame, text=message)
@@ -1039,12 +1012,12 @@ class HealthcareDApp:
                             else:
                                 self.root.after(2000, status_label.destroy)
 
-                        grant_btn = ctk.CTkButton(button_frame, text="Grant Access", fg_color="green",
+                        grant_btn = ctk.CTkButton(button_frame, text="Grant Access", fg_color="green", font=('', 16, 'bold'),
                             hover_color="darkgreen", command=grant_access)
                         grant_btn.pack(side="right", padx=5)
 
                         # Add status indicator
-                        ctk.CTkLabel(info_frame, text="No Access", text_color="gray").pack(side="right", padx=5)
+                        ctk.CTkLabel(info_frame, text="No Access", text_color="gray", font=('', 16, 'bold')).pack(side="right", padx=5)
 
                 except Exception as e:
                     print(f"Error checking doctor authorization: {e}")
@@ -1058,21 +1031,20 @@ class HealthcareDApp:
 
         records_header = ctk.CTkFrame(records_section)
         records_header.pack(pady=5, padx=5, fill="x")
-        ctk.CTkLabel(records_header, text="My Medical Records",
-                     font=("Helvetica", 18, "bold")).pack(side="left", pady=5)
+        ctk.CTkLabel(records_header, text="My Medical Records", font=("Helvetica", 18, "bold")).pack(side="left", pady=5)
 
         try:
             # Get only active medical records
             records = self.patient_contract.functions.getActiveRecords(patient_address).call()
 
             if not records:
-                ctk.CTkLabel(records_section, text="No medical records available").pack(pady=5)
+                ctk.CTkLabel(records_section, text="No medical records available", font=("Helvetica", 16, "bold")).pack(pady=5)
 
             else:
                 # Display only active records
                 for record in records:
-                    if record[7]:  # Check if record is active
-                        record_frame = ctk.CTkFrame(records_section)
+                    if record[7]:
+                        record_frame = ctk.CTkFrame(records_section, corner_radius=10, border_width=2, border_color="#0A97B0")
                         record_frame.pack(pady=5, padx=5, fill="x")
 
                         try:
@@ -1095,56 +1067,35 @@ class HealthcareDApp:
                         header_frame = ctk.CTkFrame(record_frame)
                         header_frame.pack(pady=2, padx=5, fill="x")
 
-                        title_label = ctk.CTkLabel(header_frame, text=f'Record Title : {title}', font=("Helvetica", 14, "bold"))
-                        title_label.pack(side="left", pady=2, padx=5)
-
-                        doctor_label = ctk.CTkLabel( header_frame, text=f"From Dr. {doctor_name}", font=("Helvetica", 14))
-                        doctor_label.pack(side="right", pady=2, padx=5)
+                        ctk.CTkLabel( header_frame, text=f"From Dr. {doctor_name}", font=("Helvetica", 14, "bold")).pack(side="left", pady=2, padx=5)
+                        ctk.CTkLabel(header_frame, text=f'Record Title : {title}', font=("Helvetica", 14, "bold")).pack(side="right", pady=2, padx=5)
 
                         # File info and date
                         info_frame = ctk.CTkFrame(record_frame)
                         info_frame.pack(pady=2, padx=5, fill="x")
 
-                        date_label = ctk.CTkLabel(info_frame, text=f"Date: {timestamp}")
-                        date_label.pack(side="left", pady=2, padx=5)
-
-                        file_label = ctk.CTkLabel(info_frame, text=f"File: {file_name}")
-                        file_label.pack(side="right", pady=2, padx=5)
+                        ctk.CTkLabel(info_frame, text=f"Date: {timestamp}").pack(side="right", pady=2, padx=5)
+                        ctk.CTkLabel(info_frame, text=f"File: {file_name}").pack(side="left", pady=2, padx=5)
 
                         # Description section
                         desc_frame = ctk.CTkFrame(record_frame)
                         desc_frame.pack(pady=2, padx=5, fill="x")
 
-                        ctk.CTkLabel( desc_frame, text="Description : ", 
-                                     font=("Helvetica", 14, "bold")).pack(anchor="w", pady=(2, 0), padx=5)
+                        def view_file(record_hash=ipfs_hash, record_type=file_type, record_name=file_name):
+                            self.view_medical_file(record_hash, record_type, record_name)
+
+                        ctk.CTkLabel(desc_frame, text="Description : ", font=("Helvetica", 14, "bold")).pack(side="left", pady=(2, 0), padx=5)
+                        ctk.CTkButton(desc_frame, text="View Record", command=view_file, font=('', 14), hover_color="#F26B0F").pack(side="right", pady=2, padx=5)   
 
                         desc_text = ctk.CTkTextbox(desc_frame, height=40)
                         desc_text.pack(pady=(0, 2), padx=5, fill="x")
                         desc_text.insert("1.0", resume)
                         desc_text.configure(state="disabled")
 
-                        # View button
-                        button_frame = ctk.CTkFrame(record_frame)
-                        button_frame.pack(pady=2, padx=5, fill="x")
-
-                        def view_file(record_hash=ipfs_hash, record_type=file_type, record_name=file_name):
-                            print('record_hash=', ipfs_hash, 'record_type=', file_type, 'record_name=', file_name)
-                            self.view_medical_file(record_hash, record_type, record_name)
-
-                        view_btn = ctk.CTkButton(button_frame, text="View Record", command=view_file)
-                        view_btn.pack(side="right", pady=2, padx=5)
-
         except Exception as e:
             error_msg = f"Error loading records: {str(e)}"
             print(f"Detailed error: {error_msg}")
             ctk.CTkLabel(records_section, text=error_msg).pack(pady=5)
-
-        # Navigation Frame
-        nav_frame = ctk.CTkFrame(self.root)
-        nav_frame.pack(pady=10, padx=10, fill="x")
-
-        # Logout button
-        ctk.CTkButton(nav_frame, text="Logout", command=self.show_login_page).pack(pady=5)
 
     def grant_doctor_access(self, doctor_address, patient_address, patient_private_key):
         try:
@@ -1263,8 +1214,14 @@ class HealthcareDApp:
         header_frame = ctk.CTkFrame(self.root)
         header_frame.pack(pady=10, padx=10, fill="x")
 
-        ctk.CTkLabel(header_frame, text="System Audit Log", font=("Helvetica", 20, "bold")).pack(pady=5)
-        ctk.CTkLabel(header_frame, text="Complete history of system activities", font=("Helvetica", 14)).pack(pady=(0, 5))
+        ctk.CTkLabel(header_frame, text="System Audit Log", font=("Helvetica", 25, "bold")).pack(pady=5)
+        ctk.CTkLabel(header_frame, text="Complete history of system activities", font=("Helvetica", 18)).pack(pady=(0, 5))
+
+        nav_frame = ctk.CTkFrame(header_frame)
+        nav_frame.pack(pady=10, padx=10, fill="x")
+
+        ctk.CTkButton(nav_frame, text="Back to Dashboard", command=self.show_admin_page,  width=150).pack(side="left", padx=10)
+        ctk.CTkButton(nav_frame, text="Export Log", command=self.export_logs_to_file, width=100).pack(side="right", padx=10)
 
         # Create main scrollable frame for audit logs
         audit_frame = ctk.CTkScrollableFrame(self.root, width=380, height=400)
@@ -1279,22 +1236,20 @@ class HealthcareDApp:
                 empty_frame = ctk.CTkFrame(audit_frame)
                 empty_frame.pack(pady=20, padx=10, fill="x")
                 ctk.CTkLabel(empty_frame, text="📝", font=("Helvetica", 24)).pack(pady=5)
-                ctk.CTkLabel(empty_frame, text="No audit records found", font=("Helvetica", 14)).pack(pady=5)
+                ctk.CTkLabel(empty_frame, text="No audit records found", font=("Helvetica", 18, "bold")).pack(pady=5)
                 
             else:
                 # Add filter options
                 filter_frame = ctk.CTkFrame(audit_frame)
                 filter_frame.pack(pady=5, padx=5, fill="x")
 
-                ctk.CTkLabel(filter_frame, text="Total Actions: ",
-                             font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
+                ctk.CTkLabel(filter_frame, text="Total Actions: ", font=("Helvetica", 16, "bold")).pack(side="left", padx=5)
                 ctk.CTkLabel(filter_frame, text=str(len(audit_trail))).pack(side="left")
 
-                for record in reversed(audit_trail):  # Show newest first
-                    record_frame = ctk.CTkFrame(audit_frame)
+                for record in reversed(audit_trail):
+                    record_frame = ctk.CTkFrame(audit_frame, corner_radius=10, border_width=2, border_color="#0A97B0")
                     record_frame.pack(pady=5, padx=5, fill="x")
 
-                    # Format timestamp
                     timestamp = datetime.datetime.fromtimestamp(record[4]).strftime('%Y-%m-%d %H:%M:%S')
 
                     # Get actor and subject names
@@ -1313,8 +1268,8 @@ class HealthcareDApp:
                     action_icon = "👤" if "REGISTERED" in record[1] else "📝" if "RECORD" in record[1] else "🔑" if "ACCESS" in record[1] else "i"
 
                     ctk.CTkLabel(header_box, text=action_icon, font=("Helvetica", 14)).pack(side="left", padx=5)
-                    ctk.CTkLabel(header_box, text=timestamp, font=("Helvetica", 14)).pack(side="left", padx=5)
-                    ctk.CTkLabel(header_box, text=record[1], font=("Helvetica", 14, "bold")).pack(side="right", padx=5)
+                    ctk.CTkLabel(header_box, text=record[1], font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
+                    ctk.CTkLabel(header_box, text=timestamp, font=("Helvetica", 14)).pack(side="right", padx=5)
 
                     # Content box
                     content_box = ctk.CTkFrame(record_frame)
@@ -1324,18 +1279,18 @@ class HealthcareDApp:
                     actor_frame = ctk.CTkFrame(content_box)
                     actor_frame.pack(pady=2, padx=5, fill="x")
                     ctk.CTkLabel(actor_frame, text="Actor:", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
-                    ctk.CTkLabel(actor_frame, text=f"{actor_name}", font=("Helvetica", 12)).pack(side="left", padx=5)
+                    ctk.CTkLabel(actor_frame, text=f"{actor_name}", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
                     ctk.CTkLabel(actor_frame, text=f"({record[0]})", font=("Helvetica", 10)).pack(side="right", padx=5)
 
                     # Subject info
                     subject_frame = ctk.CTkFrame(content_box)
                     subject_frame.pack(pady=2, padx=5, fill="x")
                     ctk.CTkLabel(subject_frame, text="Subject:", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
-                    ctk.CTkLabel(subject_frame, text=f"{subject_name}", font=("Helvetica", 12)).pack(side="left", padx=5)
+                    ctk.CTkLabel(subject_frame, text=f"{subject_name}", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
                     ctk.CTkLabel(subject_frame, text=f"({record[2]})", font=("Helvetica", 10)).pack(side="right", padx=5)
 
-                    # Details info
-                    if record[3].strip():  # Only show if there are details
+                    # Details info (Only show if there are details)
+                    if record[3].strip(): 
                         details_frame = ctk.CTkFrame(content_box)
                         details_frame.pack(pady=2, padx=5, fill="x")
                         ctk.CTkLabel(details_frame, text="Details:", font=("Helvetica", 12, "bold")).pack(side="left", padx=5)
@@ -1344,24 +1299,9 @@ class HealthcareDApp:
         except Exception as e:
             error_frame = ctk.CTkFrame(audit_frame)
             error_frame.pack(pady=20, padx=10, fill="x")
-            ctk.CTkLabel(error_frame, text="⚠️",
-                         font=("Helvetica", 24)).pack(pady=5)
-            ctk.CTkLabel(error_frame, text=f"Error loading audit trail:",
-                         font=("Helvetica", 14, "bold")).pack(pady=(0, 5))
-            ctk.CTkLabel(error_frame, text=str(e),
-                         font=("Helvetica", 12)).pack(pady=(0, 5))
-
-        # Navigation bar at bottom
-        nav_frame = ctk.CTkFrame(self.root)
-        nav_frame.pack(pady=10, padx=10, fill="x")
-
-        ctk.CTkButton(nav_frame, text="Back to Dashboard",
-                      command=self.show_admin_page,
-                      width=150).pack(side="left", padx=10)
-
-        ctk.CTkButton(nav_frame, text="Export Log",
-                      command=lambda: print("Export functionality to be implemented"),
-                      width=100).pack(side="right", padx=10)
+            ctk.CTkLabel(error_frame, text="⚠️", font=("Helvetica", 24)).pack(pady=5)
+            ctk.CTkLabel(error_frame, text=f"Error loading audit trail:", font=("Helvetica", 14, "bold")).pack(pady=(0, 5))
+            ctk.CTkLabel(error_frame, text=str(e), font=("Helvetica", 12)).pack(pady=(0, 5))
 
     def get_user_name(self, address):
         # Try to get doctor name
@@ -1559,6 +1499,53 @@ class HealthcareDApp:
 
         except Exception as e:
             return False, f"Error updating record: {str(e)}"
+
+    def export_logs_to_file(self):
+        try:
+            # Get all audit records (or limit as needed)
+            audit_records = self.audit_contract.functions.getAuditTrail().call()
+
+            if not audit_records:
+                print("No audit logs available to export.")
+                return
+
+            # Format logs for exporting
+            logs = []
+            for audit in audit_records:
+                # Format timestamp
+                timestamp = datetime.datetime.fromtimestamp(audit[4]).strftime('%Y-%m-%d %H:%M:%S')
+
+                # Get actor and subject names
+                try:
+                    actor_name = self.get_user_name(audit[0])
+                    subject_name = self.get_user_name(audit[2])
+                except:
+                    actor_name = audit[0]
+                    subject_name = audit[2]
+
+                log_entry = f"Actor: {actor_name} -> Action: {audit[1]} "
+                if subject_name != audit[2]:
+                    log_entry += f"- Subject: {subject_name} "
+                log_entry += f"- Date: {timestamp}\n"
+
+                logs.append(log_entry)
+
+            # Write logs to a file
+            file_name = "audit_logs.txt"
+            with open(file_name, "w", encoding="utf-8") as file:
+                file.writelines(logs)
+
+            print(f"Audit logs exported successfully to {file_name}!")
+            # Optionally show success message in GUI
+            success_label = ctk.CTkLabel(self.root, text="Logs exported successfully!", text_color="green")
+            success_label.pack(pady=10)
+            self.root.after(2000, success_label.destroy)
+
+        except Exception as e:
+            print(f"Error exporting logs: {e}")
+            error_label = ctk.CTkLabel(self.root, text="Error exporting logs", text_color="red")
+            error_label.pack(pady=10)
+            self.root.after(2000, error_label.destroy)
 
 
 if __name__ == "__main__":
