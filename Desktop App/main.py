@@ -1076,14 +1076,16 @@ class HealthcareDApp:
 
                         def view_file(record_hash=ipfs_hash, record_type=file_type, record_name=file_name):
                             self.view_medical_file(record_hash, record_type, record_name)
-
-                        ctk.CTkLabel(desc_frame, text="Description : ", font=("Helvetica", 14, "bold")).pack(side="left", pady=(2, 0), padx=5)
-                        ctk.CTkButton(desc_frame, text="View Record", command=view_file, font=('', 14), hover_color="#F26B0F").pack(side="right", pady=2, padx=5)   
-
-                        desc_text = ctk.CTkTextbox(desc_frame, height=40)
-                        desc_text.pack(pady=(0, 2), padx=5, fill="x")
-                        desc_text.insert("1.0", resume)
-                        desc_text.configure(state="disabled")
+                           
+                        if resume.strip():
+                            ctk.CTkLabel(desc_frame, text="Description : ", font=("Helvetica", 14, "bold")).pack(side="left", pady=(2, 0), padx=5)
+                            ctk.CTkButton(desc_frame, text="View Record", command=view_file, font=('', 14), hover_color="#F26B0F").pack(side="right", pady=2, padx=5)   
+                            desc_text = ctk.CTkTextbox(desc_frame, height=40)
+                            desc_text.pack(pady=(0, 2), padx=5, fill="x")
+                            desc_text.insert("1.0", resume)
+                            desc_text.configure(state="disabled")
+                        else :    
+                            ctk.CTkButton(desc_frame, text="View Record", command=view_file, font=('', 14), hover_color="#F26B0F").pack(side="right", pady=2, padx=5)
 
         except Exception as e:
             error_msg = f"Error loading records: {str(e)}"
@@ -1127,79 +1129,7 @@ class HealthcareDApp:
         except Exception as e:
                 error_label = ctk.CTkLabel(self.root, text=f"Error granting access: {str(e)}")
                 error_label.pack(pady=10)
-    """     # ????????????
-    def show_medical_record_details(self, record, doctor_name, timestamp):
-        # Create a new window for record details
-        detail_window = ctk.CTkToplevel(self.root)
-        detail_window.title("Medical Record Details")
-        detail_window.geometry("400x400")
 
-        # Add record details
-        ctk.CTkLabel(detail_window, text=f"Doctor: {doctor_name}").pack(pady=5)
-        ctk.CTkLabel(detail_window, text=f"Date: {timestamp}").pack(pady=5)
-
-        # Create scrollable text area for record content
-        record_text = ctk.CTkTextbox(detail_window, width=350, height=200)
-        record_text.pack(pady=10, padx=10)
-        record_text.insert("1.0", record)
-        record_text.configure(state="disabled")
-
-        # Close button
-        ctk.CTkButton(detail_window, text="Close", command=detail_window.destroy).pack(pady=10)
-    # ????????????
-    def refresh_medical_records(self, patient_address, records_frame):
-        # Clear existing records
-        for widget in records_frame.winfo_children():
-            widget.destroy()
-
-        try:
-            records = self.patient_contract.functions.getMedicalRecords(patient_address).call()
-
-            if not records:
-                ctk.CTkLabel(records_frame, text="No medical records").pack(pady=5)
-
-            else:
-
-                for record in records:
-                    record_frame = ctk.CTkFrame(records_frame)
-                    record_frame.pack(pady=5, padx=5, fill="x")
-
-                    try:
-                            doctor_info = self.doctor_contract.functions.getDoctor(record[2]).call()
-                            doctor_name = doctor_info[0]
-                    except:
-                        doctor_name = "Unknown Doctor"
-
-                    timestamp = datetime.datetime.fromtimestamp(record[1]).strftime('%Y-%m-%d %H:%M:%S')
-
-                    # Create a preview of the record (first 50 characters)
-                    record_preview = record[0][:50] + "..." if len(record[0]) > 50 else record[0]
-
-                    # Add record information
-                    info_frame = ctk.CTkFrame(record_frame)
-                    info_frame.pack(fill="x", padx=5, pady=2)
-
-                    ctk.CTkLabel(info_frame, text=f"Dr. {doctor_name}").pack(side="left", pady=2)
-                    ctk.CTkLabel(info_frame, text=timestamp).pack(side="right", pady=2)
-
-                    # Add record preview and view button
-                    preview_frame = ctk.CTkFrame(record_frame)
-                    preview_frame.pack(fill="x", padx=5, pady=2)
-
-                    ctk.CTkLabel(preview_frame, text=record_preview).pack(side="left", pady=2)
-
-                    ctk.CTkButton(preview_frame, text="View Details",command=lambda r=record[0], 
-                    d=doctor_name, t=timestamp: self.show_medical_record_details(r, d, t)).pack(side="right", pady=2)
-
-        except Exception as e:
-            ctk.CTkLabel(records_frame, text=f"Error loading records: {str(e)}").pack(pady=5)
-    # ????????????
-    def check_doctor_authorization(self, doctor_address, patient_address):
-            try:
-                return self.doctor_contract.functions.isAuthorized(doctor_address, patient_address).call()
-            except Exception:
-                return False
-    """
     def show_audit_page(self):
         self.clear_window()
 

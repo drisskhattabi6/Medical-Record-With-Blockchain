@@ -40,7 +40,7 @@ export const DoctorLogin = ({ contract }) => {
             className="w-full p-2 border rounded"
           />
 
-          <input type="password" placeholder="Doctor ID" value={doctorId}
+          <input type="text" placeholder="Wallet address" value={doctorId}
             onChange={(e) => setDoctorId(e.target.value)}
             className="w-full p-2 border rounded"
           />
@@ -67,6 +67,8 @@ export const DoctorDashboard = ({ doctorContract, patientContract, getSignedCont
   const [doctor, setDoctor] = useState();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [file, setFile] = useState([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,36 +113,61 @@ export const DoctorDashboard = ({ doctorContract, patientContract, getSignedCont
   const addRecord = async (e) => {
     e.preventDefault();
 
-    if (!selectedPatient || file.length === 0) {
-        alert("Please select a patient and upload at least one file.");
+    // Ensure required fields are filled
+    if (!selectedPatient) {
+        alert("Please select a patient.");
+        return;
+    }
+    if (!file) {
+        alert("Please upload a file.");
+        return;
+    }
+    if (!title.trim()) {
+        alert("Please provide a title.");
         return;
     }
 
     try {
+        // Upload file to IPFS
         const fileCID = await uploadFileToIPFS(file);
-        
-        if (!fileCID) {throw new Error("Failed to upload files to IPFS")}
+        if (!fileCID) {
+            throw new Error("Failed to upload file to IPFS.");
+        }
 
+        // Interact with the smart contract
         const { patientContract: signedDoctorContract } = await getSignedContracts();
-        const tx = await signedDoctorContract.addMedicalRecord(selectedPatient.id, fileCID, 'Unknown', file.name, 'title', 'description', '');
+        const tx = await signedDoctorContract.addMedicalRecord(
+            selectedPatient.id,
+            fileCID,
+            'Unknown',
+            file.name,
+            title.trim(),
+            description.trim(),
+            ''
+        );
+
         await tx.wait();
 
+        // Fetch updated patient records
         const patientRecords = await signedDoctorContract.getActiveRecords(selectedPatient.id);
         const doctorRecords = patientRecords.filter(record => record.doctor === id);
-        console.log('doctorRecords : ', doctorRecords);
-        
+
+        // Update state
         setPatients(patients.map(p =>
             p.id === selectedPatient.id ? { ...p, records: doctorRecords } : p
         ));
-        console.log(patients);
-        
-        setFile([]);
+
+        // Reset fields
+        setFile(null);
+        setTitle('');
+        setDescription('');
         alert('Record added successfully');
     } catch (err) {
         console.error("Error adding record:", err);
         alert('Error adding record: ' + err.message);
     }
   };
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -172,7 +199,6 @@ export const DoctorDashboard = ({ doctorContract, patientContract, getSignedCont
                       {patient.records.map((record, idx) => (
                           <div key={idx} className="p-3 bg-gray-50 rounded">
                               <div className="flex justify-between text-sm text-gray-600">
-                                  {/* <span>file CID: {record[0]} | {new Date(Number(record.timestamp) * 1000).toLocaleString()}</span> */}
                                   <span>file title: {record[3]} | file name: {record[2]} | {new Date(Number(record.timestamp) * 1000).toLocaleString()} </span>
                                   <button onClick={() => viewFile(record[0])} 
                                       className="text-blue-600 hover:underline"
@@ -180,6 +206,11 @@ export const DoctorDashboard = ({ doctorContract, patientContract, getSignedCont
                                       View File
                                   </button>
                               </div>
+                              {record[4] && (
+                                <div className="mt-2 text-sm text-gray-800">
+                                  <strong>Description:</strong> {record[4]}
+                                </div>
+                              )}
                               <div id={`folder-content-${record[0]}`} className="mt-2"></div> 
                           </div>
                       ))}
@@ -197,21 +228,41 @@ export const DoctorDashboard = ({ doctorContract, patientContract, getSignedCont
         </div>
       </div>
       
-      {selectedPatient && (<div>
+      {selectedPatient && (
+      <div>
         <h2 className="text-xl mb-4">Add Record for {selectedPatient.name}</h2>
         <form onSubmit={addRecord} className="space-y-4">
             <input
-              type="file"
-              onChange={(e) => setFile(e.target.files[0])}
-              className="w-full p-2 border rounded"
+                type="text"
+                placeholder="Record Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-2 border rounded"
+                required
             />
-
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
-            Add Record
-          </button>
+            <input
+                type="file"
+                onChange={(e) => setFile(e.target.files[0])}
+                className="w-full p-2 border rounded"
+                required
+            />
+            <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description"
+                className="w-full p-2 border rounded"
+                rows="4"
+            />
+            <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+            >
+                Add Record
+            </button>
         </form>
-      </div>
+    </div>
     )}
+
 
     </div>
   );  

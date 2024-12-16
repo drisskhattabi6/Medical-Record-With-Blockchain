@@ -39,7 +39,7 @@ export const PatientLogin = ({ contract }) => {
                 className="w-full p-2 border rounded"
               />
     
-              <input type="password" placeholder="Patient ID" value={patientId}
+              <input type="text" placeholder="Wallet address" value={patientId}
                 onChange={(e) => setPatientId(e.target.value)}
                 className="w-full p-2 border rounded"
               />
@@ -101,8 +101,8 @@ export const PatientDashboard = ({ doctorContract, patientContract, getSignedCon
 
             if (doctor[1] === 'admin') return null; 
 
-            const hasAccess = await doctorContract.isAuthorized(record[6], id);
-            if (!hasAccess) return null;
+            // const hasAccess = await doctorContract.isAuthorized(record[6], id);
+            // if (!hasAccess) return null;
 
             return { 
               recordCDI: record[0], 
@@ -225,7 +225,11 @@ export const PatientDashboard = ({ doctorContract, patientContract, getSignedCon
                   View File
                 </button>
               </div>
-              
+              {record.description && (
+                <div className="mt-2 text-sm text-gray-800">
+                  <strong>Description:</strong> {record.description}
+                </div>
+              )}
               <div id={`folder-content-${record.recordCDI}`} className="mt-2"></div> 
             </div>
           ))}
