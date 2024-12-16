@@ -43,12 +43,16 @@
 
 ## There are some screenshoots : 
 
-Admin Page
+Admin Page : 
+
 ![](../imgs/img9.png)
 
-Doctor Page
+Doctor Page : 
+
 ![](../imgs/img11.png)
+
 ![](../imgs/img10.png)
 
-Patient Page
+Patient Page : 
+
 ![](../imgs/img8.png)

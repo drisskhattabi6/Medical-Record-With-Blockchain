@@ -44,11 +44,14 @@
 
 ## There are some screenshoots : 
 
-Admin Page
+Admin Page : 
+
 ![](../imgs/img5.png)
 
-Doctor Page
+Doctor Page : 
+
 ![](../imgs/img6.png)
 
-Patient Page
+Patient Page : 
+
 ![](../imgs/img7.png)
