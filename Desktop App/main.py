@@ -7,7 +7,7 @@ import requests
 import mimetypes
 import subprocess
 from web3 import Web3
-from PIL import Image, ImageTk
+from PIL import Image
 import customtkinter as ctk
 from eth_account import Account
 import tkinter.filedialog as filedialog
@@ -47,15 +47,12 @@ class IPFSStorage:
     def get_file(self, ipfs_hash, output_path):
         """Retrieve a file from IPFS and save it to the specified path"""
         try:
-            # Use the gateway endpoint
             url = f"http://127.0.0.1:8080/ipfs/{ipfs_hash}"
-            
-            # Use requests.get() with a timeout
+
             response = requests.get(url, stream=True, timeout=30)
             print(f"Retrieving file: {ipfs_hash} to {output_path} | Response status: {response.status_code}")
 
             if response.status_code == 200:
-                # Ensure the directory exists with full permissions
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 
                 # Try to change directory permissions
@@ -120,10 +117,10 @@ class HealthcareDApp:
         except FileNotFoundError:
             raise Exception("ABI files not found! Please ensure they exist in the same directory.")
 
-        # Contract details (update addresses after deployment)
-        self.doctor_contract_address = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
-        self.patient_contract_address = "0x0B306BF915C4d645ff596e518fAf3F9669b97016"
-        self.audit_contract_address = "0x9A676e781A523b5d0C0e43731313A708CB607508"
+        # Contracts addresses
+        self.doctor_contract_address = "0x0B306BF915C4d645ff596e518fAf3F9669b97016"
+        self.patient_contract_address = "0x9A676e781A523b5d0C0e43731313A708CB607508"
+        self.audit_contract_address = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
 
 
         self.doctor_contract = self.w3.eth.contract(address=self.doctor_contract_address, abi=doctor_abi)
