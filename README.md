@@ -166,9 +166,3 @@ You will need those setups to run the Desktop App and The Web App, you will find
 ### IPFS in Docker
 - Ensure Docker is running.
 - Check container logs for errors: `docker logs ipfs_node`.
-
-### React App
-- Ensure all dependencies are installed: `npm install`.
-- Verify there are no syntax errors in your code.
-
-
