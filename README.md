@@ -153,6 +153,8 @@ go to your container, enter to the files, data/IPFS/config :
 
 You will need those setups to run the Desktop App and The Web App, you will find the instruction of running each app in their folder.
 
+----
+Note : the Desktop APP and The Web APP are using the same Contracts (contracts addresses and ABI), and the same IPFS.
 
 ## Troubleshooting
 
